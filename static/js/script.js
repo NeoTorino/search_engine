@@ -1,3 +1,13 @@
+$(document).ready(function() {
+    const filterBtn = $('[data-target="#filtersCollapse"]');
+    $('#filtersCollapse').on('show.bs.collapse', function () {
+      filterBtn.addClass('btn-filter-active');
+    });
+    $('#filtersCollapse').on('hide.bs.collapse', function () {
+      filterBtn.removeClass('btn-filter-active');
+    });
+  });
+
 document.getElementById('load-more')?.addEventListener('click', async function () {
     const btn = this;
     const query = btn.dataset.query;

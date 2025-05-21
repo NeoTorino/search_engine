@@ -14,7 +14,7 @@
         <span class="navbar-toggler-icon"></span>
       </button>
   
-      <div class="collapse navbar-collapse" id="navbarNav">
+      <div class="collapse navbar-collapse d-flex" id="navbarNav">
         <!-- Nav links -->
         <ul class="navbar-nav mr-auto">
           <li class="nav-item{% if request.path == '/' %} active{% endif %}">
@@ -28,7 +28,7 @@
   
         <!-- Search form fills the rest -->
         {% if query %}
-          <div class="d-flex flex-grow-1 ml-3">
+          <div class="ml-auto d-flex flex-grow-1">
             {% include '_search_form_navbar.html' %}
           </div>
         {% endif %}

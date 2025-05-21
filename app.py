@@ -52,7 +52,7 @@ def apply_secure_headers(response):
         "img-src 'self' data:;"
         "style-src 'self' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
         "font-src 'self' https://fonts.gstatic.com; "
-        "script-src 'self' https://cdn.jsdelivr.net https://code.jquery.com; "
+        "script-src 'self' https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com; "
     )
     return response
 
@@ -69,7 +69,7 @@ def format_date(date_str):
         elif days_ago == 1:
             ago_text = "Yesterday"
         elif days_ago > 1 and days_ago <= 30:
-            ago_text = f"{days_ago} ago"
+            ago_text = f"{days_ago} days ago"
         else:
             ago_text = "30+ days ago"
         return f"{ago_text}"
@@ -88,6 +88,43 @@ def fix_encoding(text):
 def sanitize_input(value):
     # Very basic HTML cleaner for user inputs
     return bleach.clean(value, tags=[], attributes={}, strip=True)
+
+
+def get_landing_stats():
+    url_orgs = f"{OPENSEARCH_URL}/{INDEX_NAME}/_search"
+    url_count = f"{OPENSEARCH_URL}/{INDEX_NAME}/_count"
+
+    search_payload = {
+        "size": 0,  # we don't need actual hits
+        "aggs": {
+            "unique_orgs": {
+                "cardinality": {
+                    "field": "organization"
+                }
+            }
+        }
+    }
+
+    total_jobs = 0
+    total_orgs = 0
+
+    try:
+        response = requests.get(url=url_orgs, auth=AUTH, json=search_payload, verify=False, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            total_orgs = data.get("aggregations", {}).get("unique_orgs", {}).get("value", 0)
+    except Exception as e:
+        print("Landing stats error (orgs).", str(e))
+    
+    try:
+        response = requests.get(url=url_count, auth=AUTH, verify=False, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            total_jobs = data.get("count", 0)
+    except Exception as e:
+        print("Landing stats error (jobs).", str(e))
+
+    return total_jobs, total_orgs
 
 
 def search_jobs(query, selected_countries=None, date_filter=None, offset=0, size=12):
@@ -136,7 +173,7 @@ def search_jobs(query, selected_countries=None, date_filter=None, offset=0, size
         })
 
     try:
-        print(json.dumps(search_payload, indent=4))
+        #print(json.dumps(search_payload, indent=4))
         response = requests.get(url=url, auth=AUTH, json=search_payload, verify=False, timeout=5)
         if response.status_code == 200:
             data = response.json()
@@ -166,7 +203,6 @@ def search_jobs(query, selected_countries=None, date_filter=None, offset=0, size
                         "date_posted": escape(job.get("date_posted", ""))
                     }
                     results.append(job_details)
-                    print(job_details)
     except Exception as e:
         print("Search error:", str(e))
 
@@ -190,26 +226,23 @@ def index():
 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return render_template('_results.html', results=results)
-    else:
-        results = []
-        total_results = 0
-        selected_countries = []
-        country_counts = {}
-        show_load_more = False
-        date_filter = None
+        
+        return render_template(
+            "index.html",
+            query=query,
+            results=results,
+            total_results=total_results,
+            offset=offset,
+            selected_countries=selected_countries,
+            country_counts=country_counts,
+            show_load_more=show_load_more,
+            selected_date=date_filter,
+            time=time
+        )
 
-    return render_template(
-        "index.html",
-        query=query,
-        results=results,
-        total_results=total_results,
-        offset=offset,
-        selected_countries=selected_countries,
-        country_counts=country_counts,
-        show_load_more=show_load_more,
-        selected_date=date_filter,
-        time=time
-    )
+    else:
+        total_jobs, total_orgs = get_landing_stats()
+        return render_template('index.html', total_jobs=total_jobs, total_orgs=total_orgs, time=time)
 
 if __name__ == '__main__':
     app.run(debug=True)

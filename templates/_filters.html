@@ -1,93 +1,65 @@
 <div class="collapse" id="filtersCollapse">
-  <div class="card mb-4">
-    <div class="card-body">
-      <form method="get" action="/" class="mb-0">
-        <input type="hidden" name="q" value="{{ query }}" />
+    <div class="card mb-4">
+      <div class="card-body">
+        <form method="get" action="/" class="mb-0">
+  
+          <!-- Hidden query input -->
+          <input type="hidden" name="q" value="{{ query }}" />
+  
+          <!-- COUNTRY FILTER -->
+          <h5 class="card-title">Filter by Country</h5>
+            <div class="row">
+            {% for country, count in country_counts.items() %}
+                <div class="country-scroll-box col-6 col-md-4 col-lg-3">
+                    <div class="form-check">
+                        <input
+                        class="form-check-input"
+                        type="checkbox"
+                        name="country"
+                        id="{{ country|lower|replace(' ', '-') }}"
+                        value="{{ country }}"
+                        {% if country in selected_countries %}checked{% endif %}
+                        />
+                        <label class="form-check-label" for="{{ country|lower|replace(' ', '-') }}">
+                        {{ country }}
+                        <span class="badge badge-secondary">{{ count }}</span>
+                        </label>
+                    </div>
+                </div>
+            {% endfor %}
+            </div>
 
-        <!-- Country Filter -->
-        <h5 class="card-title">Filter by Country</h5>
-        <div class="country-scroll-box mb-3">
-          {% for country, count in country_counts.items() %}
-          <div class="form-check form-check-inline">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              name="country"
-              id="{{ country|lower|replace(' ', '-') }}"
-              value="{{ country }}"
-              {% if country in selected_countries %}checked{% endif %}
-            />
-            <label
-              class="form-check-label mr-3"
-              for="{{ country|lower|replace(' ', '-') }}"
-            >
-              {{ country }}
-              <span class="badge badge-secondary">{{ count }}</span>
-            </label>
+  
+          <!-- DATE POSTED FILTER -->
+          <h5 class="card-title mb-3">Filter by Date Posted</h5>
+  
+          <div class="d-flex flex-wrap date-filter-container">
+            {% set date_options = [
+              {"id":"date_any", "label":"Anytime", "value":""},
+              {"id":"date_today", "label":"Today", "value":"today"},
+              {"id":"date_last_week", "label":"Last Week", "value":"last_week"},
+              {"id":"date_last_month", "label":"Last Month", "value":"last_month"},
+              {"id":"date_older", "label":"Older", "value":"older"}
+            ] %}
+            
+            {% for option in date_options %}
+            <div class="form-check mr-4 mb-2">
+              <input
+                class="form-check-input"
+                type="radio"
+                name="date_posted"
+                id="{{ option.id }}"
+                value="{{ option.value }}"
+                {% if selected_date == option.value or (not selected_date and option.value == '') %}checked{% endif %}
+              />
+              <label class="form-check-label" for="{{ option.id }}">{{ option.label }}</label>
+            </div>
+            {% endfor %}
           </div>
-          {% endfor %}
-        </div>
-
-        <!-- Date Posted Filter -->
-        <h5 class="card-title mt-3">Filter by Date Posted</h5>
-        <div class="form-check">
-          <input
-            class="form-check-input"
-            type="radio"
-            name="date_posted"
-            id="date_any"
-            value=""
-            {% if not selected_date %}checked{% endif %}
-          />
-          <label class="form-check-label" for="date_any">Anytime</label>
-        </div>
-        <div class="form-check">
-          <input
-            class="form-check-input"
-            type="radio"
-            name="date_posted"
-            id="date_today"
-            value="today"
-            {% if selected_date == 'today' %}checked{% endif %}
-          />
-          <label class="form-check-label" for="date_today">Today</label>
-        </div>
-        <div class="form-check">
-          <input
-            class="form-check-input"
-            type="radio"
-            name="date_posted"
-            id="date_last_week"
-            value="last_week"
-            {% if selected_date == 'last_week' %}checked{% endif %}
-          />
-          <label class="form-check-label" for="date_last_week">Last Week</label>
-        </div>
-        <div class="form-check">
-          <input
-            class="form-check-input"
-            type="radio"
-            name="date_posted"
-            id="date_last_month"
-            value="last_month"
-            {% if selected_date == 'last_month' %}checked{% endif %}
-          />
-          <label class="form-check-label" for="date_last_month">Last Month</label>
-        </div>
-        <div class="form-check mb-3">
-          <input
-            class="form-check-input"
-            type="radio"
-            name="date_posted"
-            id="date_older"
-            value="older"
-            {% if selected_date == 'older' %}checked{% endif %}
-          />
-          <label class="form-check-label" for="date_older">Older</label>
-        </div>
-
-        <button type="submit" class="btn btn-outline-primary btn-sm">Apply Filters</button>
-      </form>
+  
+          <button type="submit" class="btn btn-primary btn-sm mt-3">Apply Filters</button>
+        </form>
+      </div>
     </div>
   </div>
-</div>
+  

@@ -6,7 +6,7 @@
         <h5 class="card-title">{{ job.title }}</h5>
         <p class="card-text mb-2">{{ job.organization }}</p>
         <p class="card-text mb-2">{{ job.country }}</p>
-        <p class="card-text mb-2">{{ job.date_posted }}</p>
+        <p class="card-text mb-2">{{ job.date_posted|format_date }}</p>
         <p class="card-text mt-auto">{{ job.description }}</p>
       </div>
     </div>

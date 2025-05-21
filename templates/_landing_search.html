@@ -1,17 +1,20 @@
-<form method="get" action="/" class="w-100" id="landing-search-form">
-    <div class="form-row align-items-center">
-      <div class="col">
-        <input
-          type="text"
-          name="q"
-          placeholder="Search for jobs..."
-          value=""
-          class="form-control form-control-lg"
-          autocomplete="off"
-        />
-      </div>
-      <div class="col-auto">
-        <button type="submit" class="btn btn-primary btn-lg">Search</button>
+<!-- templates/_landing_search.html -->
+
+<div class="landing-typeit-container mb-4">
+    <p id="typeit-text" class="mb-4"></p>
+  </div>
+  
+  <form class="landing-search-form" method="get" action="/">
+    <div class="input-group input-group-lg shadow">
+      <input
+        type="text"
+        class="form-control border-0 landing-input"
+        placeholder="What job are you looking for?"
+        name="q"
+        autocomplete="off"
+      />
+      <div class="input-group-append">
+        <button class="btn btn-primary landing-btn" type="submit">Search</button>
       </div>
     </div>
   </form>

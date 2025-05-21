@@ -3,45 +3,49 @@
 {% block title %}Job Search{% if query %} - "{{ query }}"{% endif %}{% endblock %}
 
 {% block content %}
-  {% if not query %}
-    <!-- Landing page with big centered search -->
-    <div class="container d-flex flex-column justify-content-center align-items-center landing-search-container">
-      <h1 class="mb-4 lazard-font text-center">Search Jobs</h1>
-      {% include '_landing_search.html' %}
-    </div>
-  {% else %}
-    <!-- Search Results Page -->
-    <div class="container py-4">
-      <p class="text-muted mt-2 mb-3">
-        About {{ "{:,}".format(total_results) }} result{{ total_results != 1 and 's' or '' }} for "<strong>{{ query }}</strong>"
-      </p>
-
-      <!-- Filters -->
-      {% if query and country_counts %}
-        {% include '_filters.html' %}
-      {% endif %}
-
-      <!-- Results -->
-      {% if results %}
-        <div class="row" id="results-container">{% include '_results.html' %}</div>
-
-        {% if show_load_more %}
-        <div class="text-center mt-4">
-          <button
-            id="load-more"
-            class="btn btn-outline-secondary"
-            data-query="{{ query }}"
-            data-offset="{{ offset + 20 }}"
-            data-country="{{ selected_countries | join(',') }}"
-            data-date="{{ selected_date }}"
-          >
-            Load More
-          </button>
+    {% if not query %}
+        <div class="container-fluid landing-container d-flex flex-column justify-content-center align-items-center">
+            <h1 class="lazard-font mb-4 text-center display-4">
+                <span id="typeit-text" 
+                  data-total-jobs="{{ total_jobs }}" 
+                  data-total-orgs="{{ total_orgs }}">
+                </span>
+              </h1>
+        {% include '_landing_search.html' %}
         </div>
+    {% else %}
+        <!-- Search Results Page -->
+        <div class="container py-4">
+        <p class="text-muted mt-2 mb-3">
+            About {{ "{:,}".format(total_results) }} result{{ total_results != 1 and 's' or '' }} for "<strong>{{ query }}</strong>"
+        </p>
+
+        <!-- Filters -->
+        {% if query and country_counts %}
+            {% include '_filters.html' %}
         {% endif %}
-      {% else %}
-        <p class="text-muted">No results found for "{{ query }}"</p>
-      {% endif %}
-    </div>
-  {% endif %}
+
+        <!-- Results -->
+        {% if results %}
+            <div class="row" id="results-container">{% include '_results.html' %}</div>
+
+            {% if show_load_more %}
+            <div class="text-center mt-4">
+            <button
+                id="load-more"
+                class="btn btn-outline-secondary"
+                data-query="{{ query }}"
+                data-offset="{{ offset + 20 }}"
+                data-country="{{ selected_countries | join(',') }}"
+                data-date="{{ selected_date }}"
+            >
+                Load More
+            </button>
+            </div>
+            {% endif %}
+        {% else %}
+            <p class="text-muted">No results found for "{{ query }}"</p>
+        {% endif %}
+        </div>
+    {% endif %}
 {% endblock %}
