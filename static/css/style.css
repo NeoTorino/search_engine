@@ -15,7 +15,7 @@ body {
   background-color: #f8f9fa;
   font-family: var(--font-family);
   margin: 0;
-  padding: 0;
+  padding: 75px 0 0 0; /* top 75px, others 0 */
   color: #212529;
 }
 
@@ -117,14 +117,13 @@ form button.btn-lg {
 
 /* Horizontal scrollable container for country checkboxes */
 .country-scroll-box {
-  display: flex;
+  padding-bottom: 5px;
   overflow-x: auto;
-  padding: 0.5rem;
-  border: 1px solid #dee2e6;
-  border-radius: 0.375rem;
-  background-color: #ffffff;
   white-space: nowrap;
-  scroll-behavior: smooth;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px;
+  background-color: #f9f9f9;
 }
 
 .country-scroll-box::-webkit-scrollbar {
@@ -134,4 +133,46 @@ form button.btn-lg {
 .country-scroll-box::-webkit-scrollbar-thumb {
   background-color: rgba(0, 0, 0, 0.2);
   border-radius: 3px;
+}
+
+.navbar-brand {
+  font-weight: bold;
+  font-size: 1.3rem;
+}
+
+.navbar-nav .nav-item .nav-link {
+  font-size: 1.05rem;
+}
+
+/* Center landing page search form vertically and horizontally */
+.landing-search-container {
+  height: calc(100vh - 305px); /* full viewport height minus navbar */
+  min-height: 400px;
+}
+
+/* Navbar search form adjustments */
+#navbar-search-form input.form-control {
+  width: 250px;
+}
+
+#navbar-search-form button {
+  white-space: nowrap;
+}
+
+/* in your CSS */
+.btn-toggle-filters {
+  float: right;
+  margin-bottom: 1rem;
+}
+
+.flex-grow {
+  flex-grow: 1;
+}
+
+form.form-inline input.form-control {
+  min-width: 0; /* prevents input from overflowing */
+}
+
+.navbar .form-control {
+  min-width: 0;
 }

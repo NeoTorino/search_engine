@@ -1,20 +1,15 @@
-{% for result in results %}
-  <div class="col-md-4 mb-4 d-flex align-items-stretch">
-    <a href="{{ result.url }}" target="_blank" class="card-link no-underline w-100">
-      <div class="card h-100">
-        <div class="card-body d-flex flex-column">
-          <h5 class="card-title">{{ result.title }}</h5>
-          <ul class="list-group list-group-flush mb-3">
-            <li class="list-group-item py-1 text-muted small">{{ result.organization }}</li>
-            <li class="list-group-item py-1 text-muted small">{{ result.date_posted|format_date }}</li>
-            <li class="list-group-item py-1 text-muted small">{{ result.country }}</li>
-          </ul>
-          <p class="card-text flex-grow-1">
-            {{ result.description[:300] }}{% if result.description and result.description|length > 300 %}...{% endif %}
-          </p>
-          <small class="text-muted fst-italic mt-auto">Click card to open</small>
-        </div>
+{% for job in results %}
+<div class="col-md-6 col-lg-4 mb-4">
+  <a href="{{ job.url }}" class="no-underline" target="_blank" rel="noopener noreferrer">
+    <div class="card h-100">
+      <div class="card-body d-flex flex-column">
+        <h5 class="card-title">{{ job.title }}</h5>
+        <p class="card-text mb-2">{{ job.organization }}</p>
+        <p class="card-text mb-2">{{ job.country }}</p>
+        <p class="card-text mb-2">{{ job.date_posted }}</p>
+        <p class="card-text mt-auto">{{ job.description }}</p>
       </div>
-    </a>
-  </div>
+    </div>
+  </a>
+</div>
 {% endfor %}

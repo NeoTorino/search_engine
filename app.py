@@ -49,9 +49,10 @@ def apply_secure_headers(response):
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers['Content-Security-Policy'] = (
         "default-src 'self'; "
-        "style-src 'self' https://cdn.jsdelivr.net; "
-        "script-src 'self' https://cdn.jsdelivr.net; "
         "img-src 'self' data:;"
+        "style-src 'self' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "script-src 'self' https://cdn.jsdelivr.net https://code.jquery.com; "
     )
     return response
 
@@ -144,8 +145,11 @@ def search_jobs(query, selected_countries=None, date_filter=None, offset=0, size
             country_buckets = data.get('aggregations', {}).get('countries', {}).get('buckets', {})
 
             # Country count mapping
-            country_counts = {bucket["key"]: bucket["doc_count"] for bucket in country_buckets}
-            
+            country_counts = dict(sorted(
+                ((bucket["key"], bucket["doc_count"]) for bucket in country_buckets),
+                key=lambda x: x[0].lower()
+            ))
+
             # Determine if "Load More" button should show
             show_load_more = (offset + size) < total_results
 
@@ -155,13 +159,14 @@ def search_jobs(query, selected_countries=None, date_filter=None, offset=0, size
                 if job:
                     job_details = {
                         "title": escape(job.get("title", "No Title")),
-                        "description": truncate_description(fix_encoding(job.get("description", ""))),
-                        "country": escape(job.get("country", "").title()),
-                        "organization": escape(job.get("organization", "").title()),
+                        "description": truncate_description(fix_encoding(job.get("description", "No Description"))),
+                        "country": escape(job.get("country", "No Country").title()),
+                        "organization": escape(job.get("organization", "No Organization").title()),
                         "url": escape(job.get("url", "")),
                         "date_posted": escape(job.get("date_posted", ""))
                     }
                     results.append(job_details)
+                    print(job_details)
     except Exception as e:
         print("Search error:", str(e))
 
