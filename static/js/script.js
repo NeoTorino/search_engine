@@ -1,12 +1,21 @@
 document.getElementById('load-more')?.addEventListener('click', async function () {
     const btn = this;
     const query = btn.dataset.query;
-    let offset = parseInt(btn.dataset.offset) || 0;
+    const offset = parseInt(btn.dataset.offset) || 0;
+    const countries = btn.dataset.country ? btn.dataset.country.split(',') : [];
+    const datePosted = btn.dataset.date || '';
 
     btn.disabled = true;
     btn.textContent = 'Loading...';
 
-    const res = await fetch(`/?q=${encodeURIComponent(query)}&from=${offset}`, {
+    // Build query string
+    const params = new URLSearchParams();
+    params.append('q', query);
+    params.append('from', offset);
+    countries.forEach(c => params.append('country', c));
+    if (datePosted) params.append('date_posted', datePosted);
+
+    const res = await fetch(`/?${params.toString()}`, {
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
     });
 
@@ -20,28 +29,23 @@ document.getElementById('load-more')?.addEventListener('click', async function (
 
         const container = document.getElementById('results-container');
 
-        // Temporary element to parse new HTML
+        // Append new results
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = html;
-
-        // Append new results
         container.insertAdjacentHTML('beforeend', html);
 
-        // Get all cards after insert
+        // Scroll into view
         const allCards = container.querySelectorAll('.card');
         const newCardsCount = tempDiv.querySelectorAll('.card').length;
-
-        // Calculate index of first new card
         const firstNewCardIndex = allCards.length - newCardsCount;
         const firstNewCard = allCards[firstNewCardIndex];
 
         if (firstNewCard) {
-            // Calculate offset position minus navbar height
-            const navbarHeight = document.getElementById('topbar').offsetHeight || 0;
+            const navbarHeight = document.getElementById('topbar')?.offsetHeight || 0;
             const cardTop = firstNewCard.getBoundingClientRect().top + window.pageYOffset;
 
             window.scrollTo({
-                top: cardTop - navbarHeight - 10, // 10px extra padding
+                top: cardTop - navbarHeight - 10,
                 behavior: 'smooth'
             });
         }
@@ -53,14 +57,3 @@ document.getElementById('load-more')?.addEventListener('click', async function (
         btn.textContent = 'Error loading more results';
     }
 });
-
-// Get exact navbar height dynamically
-window.addEventListener('load', () => {
-    const topbar = document.getElementById('topbar');
-    const mainContent = document.getElementById('main-content');
-    if (topbar && mainContent) {
-      const topbarHeight = topbar.offsetHeight;
-      mainContent.style.paddingTop = `${topbarHeight + 16}px`; // 16px extra space
-    }
-});
-  

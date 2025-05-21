@@ -1,0 +1,137 @@
+/* Variables */
+:root {
+  --primary-color: #007bff;
+  --card-bg: #ffffff;
+  --card-border-radius: 0.375rem;
+  --card-shadow: rgba(0, 0, 0, 0.1);
+  --font-family: "Lora", serif;
+}
+
+/* Import Lazard-like font from Google Fonts (or add your own font import) */
+@import url('https://fonts.googleapis.com/css2?family=Lora&display=swap');
+
+/* Reset and base styles */
+body {
+  background-color: #f8f9fa;
+  font-family: var(--font-family);
+  margin: 0;
+  padding: 0;
+  color: #212529;
+}
+
+/* Lazard-style header */
+.lazard-font {
+  font-family: var(--font-family);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #212529;
+}
+
+/* Card link no underline */
+a.no-underline {
+  text-decoration: none;
+  color: inherit;
+}
+
+a.no-underline:hover,
+a.no-underline:focus {
+  text-decoration: none; /* no underline on hover */
+  color: var(--primary-color);
+}
+
+/* Cards all same height */
+.card {
+  background-color: var(--card-bg);
+  border-radius: var(--card-border-radius);
+  box-shadow: 0 2px 6px var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  height: 100%; /* full height to match sibling cards */
+  transition: box-shadow 0.3s ease;
+  cursor: pointer;
+}
+
+.card:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.card-body {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.card-title {
+  font-weight: 600;
+  font-size: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: #212529;
+}
+
+.list-group-item {
+  font-size: 0.85rem;
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
+  border: none;
+  color: #6c757d;
+}
+
+.card-text {
+  color: #495057;
+  font-size: 1rem;
+  flex-grow: 1;
+}
+
+/* Utility margin */
+.mb-4 {
+  margin-bottom: 1.5rem !important;
+}
+
+/* Form check spacing */
+.form-check-input {
+  margin-top: 0.3rem;
+}
+
+.form-check-label {
+  margin-right: 1rem;
+  user-select: none;
+  font-size: 1rem;
+}
+
+/* Search input full width */
+form .form-row > .col {
+  flex-grow: 1;
+}
+
+/* Larger input for search */
+form input.form-control-lg {
+  font-size: 1.25rem;
+  padding: 0.5rem 1rem;
+}
+
+/* Larger button for search */
+form button.btn-lg {
+  padding: 0.5rem 1.5rem;
+  font-size: 1.25rem;
+}
+
+/* Horizontal scrollable container for country checkboxes */
+.country-scroll-box {
+  display: flex;
+  overflow-x: auto;
+  padding: 0.5rem;
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  background-color: #ffffff;
+  white-space: nowrap;
+  scroll-behavior: smooth;
+}
+
+.country-scroll-box::-webkit-scrollbar {
+  height: 6px;
+}
+
+.country-scroll-box::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
