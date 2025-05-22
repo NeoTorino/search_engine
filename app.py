@@ -2,7 +2,7 @@ import os
 import time
 import json
 from datetime import datetime, timedelta
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, jsonify
 import requests
 import urllib3
 import bleach
@@ -39,7 +39,6 @@ def truncate_description(text, limit=300):
     if len(text) <= limit:
         return text
     return text[:limit].rsplit(" ", 1)[0] + "..."
-
 
 # Secure headers after every response
 @app.after_request
@@ -89,7 +88,6 @@ def sanitize_input(value):
     # Very basic HTML cleaner for user inputs
     return bleach.clean(value, tags=[], attributes={}, strip=True)
 
-
 def get_date_range_days(days):
     now = datetime.utcnow()
     if days >= 90:
@@ -98,7 +96,6 @@ def get_date_range_days(days):
     else:
         # jobs posted within the last `days` days
         return {'gte': (now - timedelta(days=days)).isoformat()}
-
 
 def get_landing_stats():
     url_orgs = f"{OPENSEARCH_URL}/{INDEX_NAME}/_search"
@@ -136,9 +133,48 @@ def get_landing_stats():
 
     return total_jobs, total_orgs
 
+def get_all_countries():
+    """Get all available countries from OpenSearch for the multi-select dropdown"""
+    url = f"{OPENSEARCH_URL}/{INDEX_NAME}/_search"
+    
+    search_payload = {
+        "size": 0,
+        "aggs": {
+            "countries": {
+                "terms": {
+                    "field": "country",
+                    "size": 200,  # Get up to 200 countries
+                    "order": {
+                        "_key": "asc"  # Alphabetical order
+                    }
+                }
+            }
+        }
+    }
+    
+    try:
+        response = requests.get(url=url, auth=AUTH, json=search_payload, verify=False, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            country_buckets = data.get('aggregations', {}).get('countries', {}).get('buckets', [])
+            
+            # Convert to format expected by multi-select component
+            countries = []
+            for bucket in country_buckets:
+                country_name = bucket["key"]
+                job_count = bucket["doc_count"]
+                countries.append({
+                    "value": country_name.lower(),  # Use lowercase for consistent filtering
+                    "label": f"{country_name.title()} ({job_count})",  # Show job count
+                    "count": job_count
+                })
+            
+            return countries
+    except Exception as e:
+        print("Error fetching countries:", str(e))
+        return []
 
 def search_jobs(query, selected_countries=None, date_range=None, offset=0, size=12):
-
     url = f"{OPENSEARCH_URL}/{INDEX_NAME}/_search"
 
     search_payload = {
@@ -169,6 +205,7 @@ def search_jobs(query, selected_countries=None, date_range=None, offset=0, size=
 
     # If country filters are applied
     if selected_countries:
+        # Convert selected countries back to original case for OpenSearch query
         search_payload["query"]["bool"]["filter"].append({
             "terms": {"country": selected_countries}
         })
@@ -217,6 +254,12 @@ def search_jobs(query, selected_countries=None, date_range=None, offset=0, size=
 
     return results, total_results, country_counts, show_load_more
 
+# NEW: API endpoint for dynamic country loading
+@app.route("/api/countries", methods=["GET"])
+def api_countries():
+    """API endpoint to get all countries for the multi-select dropdown"""
+    countries = get_all_countries()
+    return jsonify(countries)
 
 @app.route("/", methods=["GET"])
 def index():
@@ -235,11 +278,31 @@ def index():
     date_range = get_date_range_days(days)
 
     if query:
-        selected_countries = [sanitize_input(c) for c in request.args.getlist('country')]
-        results, total_results, country_counts, show_load_more = search_jobs(query, selected_countries, date_range, offset)
+        # Handle both old checkbox-style and new multi-select countries
+        selected_countries_raw = request.args.getlist('country')
+        selected_countries = [sanitize_input(c) for c in selected_countries_raw]
+        
+        # Convert lowercase values back to proper case for OpenSearch
+        # This handles the multi-select component sending lowercase values
+        all_countries = get_all_countries()
+        country_mapping = {c["value"]: c["label"].split(" (")[0] for c in all_countries}
+        
+        # Map selected countries to proper case
+        mapped_countries = []
+        for country in selected_countries:
+            if country.lower() in country_mapping:
+                mapped_countries.append(country_mapping[country.lower()])
+            else:
+                mapped_countries.append(country)  # Fallback to original
+        
+        results, total_results, country_counts, show_load_more = search_jobs(
+            query, mapped_countries, date_range, offset
+        )
 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return render_template('_results.html', results=results)
+
+        all_countries_list = get_all_countries()
         
         return render_template(
             "index.html",
@@ -247,7 +310,8 @@ def index():
             results=results,
             total_results=total_results,
             offset=offset,
-            selected_countries=selected_countries,
+            all_countries=all_countries or [],
+            selected_countries=selected_countries or [],
             country_counts=country_counts,
             show_load_more=show_load_more,
             date_posted_days=days,
@@ -256,7 +320,16 @@ def index():
 
     else:
         total_jobs, total_orgs = get_landing_stats()
-        return render_template('index.html', total_jobs=total_jobs, total_orgs=total_orgs, time=time)
+        # Get all countries for the landing page too (in case you want to show the filter)
+        all_countries_list = get_all_countries()
+        
+        return render_template(
+            'index.html', 
+            total_jobs=total_jobs, 
+            total_orgs=total_orgs, 
+            all_countries=all_countries_list or [],
+            time=time
+        )
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -407,3 +407,38 @@ input[type="range"]::-ms-thumb {
   cursor: pointer;
   border: none;
 }
+/* Stylish date slider wrapper */
+input.styled-range {
+  --range-thumb-size: 1rem;
+  height: 6px;
+  border-radius: 5px;
+  background: linear-gradient(to right, var(--primary-color) 50%, #dee2e6 50%);
+  appearance: none;
+  width: 100%;
+  transition: background 0.3s ease;
+}
+
+input.styled-range::-webkit-slider-thumb {
+  appearance: none;
+  width: var(--range-thumb-size);
+  height: var(--range-thumb-size);
+  border-radius: 50%;
+  background: white;
+  border: 2px solid var(--primary-color);
+  cursor: pointer;
+  margin-top: -0.4rem;
+}
+
+input.styled-range::-moz-range-thumb {
+  width: var(--range-thumb-size);
+  height: var(--range-thumb-size);
+  border-radius: 50%;
+  background: white;
+  border: 2px solid var(--primary-color);
+  cursor: pointer;
+}
+
+#date-slider-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+}

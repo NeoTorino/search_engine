@@ -1,59 +1,56 @@
 <div class="collapse" id="filtersCollapse">
-    <div class="card mb-4">
-      <div class="card-body">
-        <form method="get" action="/" class="mb-0">
-  
-          <!-- Hidden query input -->
-          <input type="hidden" name="q" value="{{ query }}" />
+  <div class="card mb-4 shadow-sm border-0">
+    <div class="card-body">
+      <form method="get" action="/" class="mb-0">
 
-          <!-- DATE POSTED FILTER -->
-          <div class="date-slider-container mb-4">
-            <label for="date-slider" class="form-label d-block">
-              <strong>Date posted</strong>
-            </label>
-            
-            <input
-              type="range"
-              min="1"
-              max="90"
-              value="{{ date_posted_days or 30 }}"
-              class="form-range"
-              id="date-slider"
-              name="date_posted_days"
-            />
-          
-            <div id="date-slider-label" class="mt-2 text-muted">
+        <input type="hidden" name="q" value="{{ query }}" />
+
+        <!-- DATE POSTED FILTER -->
+        <div class="mb-4">
+          <label for="date-slider" class="form-label d-flex justify-content-between align-items-center">
+            <h5 class="mb-2">Filter by Date Posted</h5>
+            <span id="date-slider-label" class="text-muted small">
               Showing jobs posted in the last {{ date_posted_days or 30 }} days
-            </div>
-          </div>
-  
-          <!-- COUNTRY FILTER -->
-          <h5 class="card-title">Filter by Country</h5>
-            <div class="row">
-            {% for country, count in country_counts.items() %}
-                <div class="country-scroll-box col-6 col-md-4 col-lg-3">
-                    <div class="form-check">
-                        <input
-                        class="form-check-input"
-                        type="checkbox"
-                        name="country"
-                        id="{{ country|lower|replace(' ', '-') }}"
-                        value="{{ country }}"
-                        {% if country in selected_countries %}checked{% endif %}
-                        />
-                        <label class="form-check-label" for="{{ country|lower|replace(' ', '-') }}">
-                        {{ country }}
-                        <span class="badge badge-secondary">{{ count }}</span>
-                        </label>
+            </span>
+          </label>
+          <input
+            type="range"
+            min="1"
+            max="90"
+            value="{{ date_posted_days or 30 }}"
+            class="form-range styled-range"
+            id="date-slider"
+            name="date_posted_days"
+          />
+        </div>
+
+        
+
+          <div class="filter-group">
+            <label>Countries:</label>
+            <div class="multiselect-container" id="country-multiselect">
+                <button class="multiselect-button" type="button">
+                    <span class="multiselect-text">All Countries</span>
+                    <div class="multiselect-arrow"></div>
+                </button>
+                
+                <div class="multiselect-dropdown">
+                    <div class="multiselect-search">
+                        <input type="text" placeholder="Search countries..." id="country-search">
+                    </div>
+                    <div class="multiselect-options" id="country-options">
+                        <!-- Options populated by JavaScript -->
                     </div>
                 </div>
-            {% endfor %}
             </div>
-  
-          <button type="submit" class="btn btn-primary btn-sm mt-3">Apply Filters</button>
+            
+            <!-- Hidden inputs for form submission -->
+            <div id="country-hidden-inputs"></div>
+        </div>
 
-        </form>
-      </div>
+
+        <button type="submit" class="btn btn-primary btn-sm mt-2">Apply Filters</button>
+      </form>
     </div>
   </div>
-  
+</div>
