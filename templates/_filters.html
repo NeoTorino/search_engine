@@ -5,6 +5,27 @@
   
           <!-- Hidden query input -->
           <input type="hidden" name="q" value="{{ query }}" />
+
+          <!-- DATE POSTED FILTER -->
+          <div class="date-slider-container mb-4">
+            <label for="date-slider" class="form-label d-block">
+              <strong>Date posted</strong>
+            </label>
+            
+            <input
+              type="range"
+              min="1"
+              max="90"
+              value="{{ date_posted_days or 30 }}"
+              class="form-range"
+              id="date-slider"
+              name="date_posted_days"
+            />
+          
+            <div id="date-slider-label" class="mt-2 text-muted">
+              Showing jobs posted in the last {{ date_posted_days or 30 }} days
+            </div>
+          </div>
   
           <!-- COUNTRY FILTER -->
           <h5 class="card-title">Filter by Country</h5>
@@ -28,36 +49,9 @@
                 </div>
             {% endfor %}
             </div>
-
-  
-          <!-- DATE POSTED FILTER -->
-          <h5 class="card-title mb-3">Filter by Date Posted</h5>
-  
-          <div class="d-flex flex-wrap date-filter-container">
-            {% set date_options = [
-              {"id":"date_any", "label":"Anytime", "value":""},
-              {"id":"date_today", "label":"Today", "value":"today"},
-              {"id":"date_last_week", "label":"Last Week", "value":"last_week"},
-              {"id":"date_last_month", "label":"Last Month", "value":"last_month"},
-              {"id":"date_older", "label":"Older", "value":"older"}
-            ] %}
-            
-            {% for option in date_options %}
-            <div class="form-check mr-4 mb-2">
-              <input
-                class="form-check-input"
-                type="radio"
-                name="date_posted"
-                id="{{ option.id }}"
-                value="{{ option.value }}"
-                {% if selected_date == option.value or (not selected_date and option.value == '') %}checked{% endif %}
-              />
-              <label class="form-check-label" for="{{ option.id }}">{{ option.label }}</label>
-            </div>
-            {% endfor %}
-          </div>
   
           <button type="submit" class="btn btn-primary btn-sm mt-3">Apply Filters</button>
+
         </form>
       </div>
     </div>

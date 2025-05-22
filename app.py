@@ -90,6 +90,16 @@ def sanitize_input(value):
     return bleach.clean(value, tags=[], attributes={}, strip=True)
 
 
+def get_date_range_days(days):
+    now = datetime.utcnow()
+    if days >= 90:
+        # 90+ means everything older than 90 days (no upper limit)
+        return {'lt': (now - timedelta(days=90)).isoformat()}
+    else:
+        # jobs posted within the last `days` days
+        return {'gte': (now - timedelta(days=days)).isoformat()}
+
+
 def get_landing_stats():
     url_orgs = f"{OPENSEARCH_URL}/{INDEX_NAME}/_search"
     url_count = f"{OPENSEARCH_URL}/{INDEX_NAME}/_count"
@@ -127,7 +137,7 @@ def get_landing_stats():
     return total_jobs, total_orgs
 
 
-def search_jobs(query, selected_countries=None, date_filter=None, offset=0, size=12):
+def search_jobs(query, selected_countries=None, date_range=None, offset=0, size=12):
 
     url = f"{OPENSEARCH_URL}/{INDEX_NAME}/_search"
 
@@ -164,7 +174,6 @@ def search_jobs(query, selected_countries=None, date_filter=None, offset=0, size
         })
     
     # Date filter
-    date_range = get_date_range(date_filter)
     if date_range:
         search_payload["query"]["bool"]["filter"].append({
             "range": {
@@ -218,11 +227,16 @@ def index():
         offset = int(request.args.get('from', 0))
     except (ValueError, TypeError):
         offset = 0
+    
+    try:
+        days = int(request.args.get('date_posted_days', 30))
+    except (ValueError, TypeError):
+        days = 30
+    date_range = get_date_range_days(days)
 
     if query:
         selected_countries = [sanitize_input(c) for c in request.args.getlist('country')]
-        date_filter = request.args.get('date_posted')
-        results, total_results, country_counts, show_load_more = search_jobs(query, selected_countries, date_filter, offset)
+        results, total_results, country_counts, show_load_more = search_jobs(query, selected_countries, date_range, offset)
 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return render_template('_results.html', results=results)
@@ -236,7 +250,7 @@ def index():
             selected_countries=selected_countries,
             country_counts=country_counts,
             show_load_more=show_load_more,
-            selected_date=date_filter,
+            date_posted_days=days,
             time=time
         )
 

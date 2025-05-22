@@ -9,10 +9,13 @@ document.addEventListener('DOMContentLoaded', () => {
         loop: true,
         waitUntilVisible: true,
     })
-        .type(`${totalJobs} jobs`)
+        .type(`${totalJobs} jobs.`)
         .pause(1500)
         .delete(null, { delay: 500 })
-        .type(`${totalOrgs} organizations`)
+        .type(`${totalOrgs} organizations.`)
+        .pause(1500)
+        .delete(null, { delay: 500 })
+        .type(["No more fake jobs."])
         .pause(1500)
         .delete(null, { delay: 500 })
         .go();
