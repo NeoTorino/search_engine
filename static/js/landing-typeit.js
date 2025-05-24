@@ -1,22 +1,29 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const el = document.getElementById('typeit-text');
-    const totalJobs = Number(el.dataset.totalJobs).toLocaleString();
-    const totalOrgs = Number(el.dataset.totalOrgs).toLocaleString();
+    const el = document.getElementById('typeit-text-values');
 
-    new TypeIt("#typeit-text", {
-        speed: 75,
-        breakLines: false,
-        loop: true,
-        waitUntilVisible: true,
-    })
-        .type(`${totalJobs} jobs.`)
-        .pause(1500)
-        .delete(null, { delay: 500 })
-        .type(`${totalOrgs} organizations.`)
-        .pause(1500)
-        .delete(null, { delay: 500 })
-        .type(["No more fake jobs."])
-        .pause(1500)
-        .delete(null, { delay: 500 })
-        .go();
+    if (el){
+
+        const totalJobs = el.dataset.totalJobs?.trim().toLocaleString();
+        const totalOrgs = el.dataset.totalOrgs?.trim().toLocaleString();
+
+        if (totalJobs && !isNaN(Number(totalJobs)) &&
+            totalOrgs && !isNaN(Number(totalOrgs)))
+        {
+            
+            new TypeIt("#typeit-text", {
+                speed: 75,
+                breakLines: true,
+                loop: false,
+                waitUntilVisible: true,
+                afterComplete: function (instance) {
+                    instance.destroy();
+                }
+            })
+            .type(`${totalJobs} jobs across ${totalOrgs} organizations. `, { delay: 1000 })
+            .break()
+            .type('No fake jobs. No <em>middle man.</em>', {delay:0})
+            .go();
+
+        }
+    }
 });

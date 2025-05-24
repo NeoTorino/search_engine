@@ -12,9 +12,10 @@
 
 /* Reset and base styles */
 html, body {
-  height: 100%;
   margin: 0;
   padding: 0;
+  width: 100%;
+  overflow-x: hidden; /* Prevent unwanted horizontal scrollbars */
 }
 
 body {
@@ -24,6 +25,25 @@ body {
   font-family: var(--font-family);
   color: #212529;
   background-color: #f8f9fa;
+}
+
+.liner {
+  display: flex;
+  align-items: flex-start;
+  text-align: left;
+
+  &:after {
+    content: '';
+    flex-grow: 1;
+    height: 1px;
+    background: #d6d6d6;
+    min-width: 20px;
+    margin: auto;
+  }
+
+  &:after {
+    margin-left: 20px;
+  }
 }
 
 /* Lazard-style header */
@@ -151,12 +171,6 @@ form button.btn-lg {
   font-size: 1.05rem;
 }
 
-/* Center landing page search form vertically and horizontally */
-.landing-search-container {
-  height: calc(100vh - 305px); /* full viewport height minus navbar */
-  min-height: 400px;
-}
-
 /* Navbar search form adjustments */
 #navbar-search-form input.form-control {
   width: 250px;
@@ -192,62 +206,65 @@ form.d-flex input.form-control {
   flex-grow: 1;
   min-width: 0;
 }
+/* ********* LANDIN PAGE ************** */
 
-/* Landing Page Styling */
-.landing-container {
-  min-height: calc(100vh - 57px);
-  padding-top: 20px;
-  box-sizing: border-box;
-  
+.landing-wrapper {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
+  min-height: 100vh;
+  padding-top: 120px;
+  text-align: center;
+  min-height: calc(100vh - 75px);
+  padding-top: 120px;
 
   background-image: url('/static/images/office_3264x2448.jpg');
   background-size: cover;
-  background-position: center;
+  background-position: center center;
   background-repeat: no-repeat;
+
+  width: 100vw;           /* Force full viewport width */
+  margin: 0;              /* Remove default margin */
+  padding-left: 0;        /* Remove horizontal padding */
+  padding-right: 0;
+  box-sizing: border-box;
 }
 
+
+/* Reserve space for typeit and prevent it from pushing */
+.landing-typeit-container {
+  height: 180px; /* fixed height */
+  overflow: hidden; /* hide overflow to avoid pushing */
+  margin-top: 0px;
+  width: 100%;
+}
+
+/* Optional styling for TypeIt text */
+#typeit-text {
+  white-space: pre-line;
+  font-size: 1.6rem;
+  line-height: 1.4;
+}
 .landing-search-form {
   width: 100%;
-  max-width: 600px;
+  max-width: 700px; /* You can adjust this as needed */
+  margin: 0 auto;
 }
 
-.landing-input {
-  border-top-left-radius: 50px;
-  border-bottom-left-radius: 50px;
-  padding-left: 1.25rem;
-  font-size: 1.25rem;
+.input-group {
+  width: 100%;
 }
 
-.landing-btn {
-  border-top-right-radius: 50px;
-  border-bottom-right-radius: 50px;
-  font-size: 1.25rem;
-  padding: 0 2rem;
-}
+/* *********** Filters ********** */
 
-.input-group-lg > .form-control,
-.input-group-lg > .input-group-append > .btn {
-  height: 58px;
-}
+#filters{
+  padding: 15px;
 
-@media (max-width: 576px) {
-  .landing-btn {
-    padding: 0 1.5rem;
-    font-size: 1rem;
-  }
-
-  .landing-input {
-    font-size: 1rem;
-  }
-
-  .input-group-lg > .form-control,
-  .input-group-lg > .input-group-append > .btn {
-    height: 48px;
-  }
+  margin-bottom: 15px;
+  border-radius: 14px 14px 14px 14px;
+  -webkit-border-radius: 14px 14px 14px 14px;
+  -moz-border-radius: 14px 14px 14px 14px;
+  background: #dcdcdc;
 }
 
 .country-filter-container .form-check,

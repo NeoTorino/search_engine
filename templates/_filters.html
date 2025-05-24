@@ -1,56 +1,54 @@
-<div class="collapse" id="filtersCollapse">
-  <div class="card mb-4 shadow-sm border-0">
-    <div class="card-body">
-      <form method="get" action="/" class="mb-0">
+<div id="filters" class="container">
 
-        <input type="hidden" name="q" value="{{ query }}" />
+  <form method="get" action="/" class="mb-0" id="filters-form">
 
+    <input type="hidden" name="q" value="{{ query }}" />
+
+    <div class="row">
+      <div class="col-sm">
         <!-- DATE POSTED FILTER -->
-        <div class="mb-4">
+        <div>
           <label for="date-slider" class="form-label d-flex justify-content-between align-items-center">
-            <h5 class="mb-2">Filter by Date Posted</h5>
             <span id="date-slider-label" class="text-muted small">
               Showing jobs posted in the last {{ date_posted_days or 30 }} days
             </span>
           </label>
-          <input
-            type="range"
-            min="1"
-            max="90"
-            value="{{ date_posted_days or 30 }}"
-            class="form-range styled-range"
-            id="date-slider"
-            name="date_posted_days"
-          />
+          <input type="range" id="date-slider" name="date_posted_days" min="0" max="30" value="{{ date_posted_days or 30 }}">
         </div>
-
-        
-
-          <div class="filter-group">
-            <label>Countries:</label>
-            <div class="multiselect-container" id="country-multiselect">
-                <button class="multiselect-button" type="button">
-                    <span class="multiselect-text">All Countries</span>
-                    <div class="multiselect-arrow"></div>
-                </button>
-                
-                <div class="multiselect-dropdown">
-                    <div class="multiselect-search">
-                        <input type="text" placeholder="Search countries..." id="country-search">
-                    </div>
-                    <div class="multiselect-options" id="country-options">
-                        <!-- Options populated by JavaScript -->
-                    </div>
-                </div>
+      </div>
+      
+      <div class="col-sm mt-3">
+        <div class="filter-group">
+          <!-- COUNTRY FILTER -->
+          <div id="country-multiselect" class="multiselect-container">
+            <button class="multiselect-button" type="button">
+              <span class="multiselect-text">All Countries</span>
+              <div class="multiselect-arrow"></div>
+            </button>
+          
+            <div class="multiselect-dropdown">
+              <div class="multiselect-search">
+                <input type="text" placeholder="Search countries..." id="country-search">
+              </div>
+              <div id="country-options" class="multiselect-options"></div>
             </div>
-            
-            <!-- Hidden inputs for form submission -->
-            <div id="country-hidden-inputs"></div>
+          </div>
+          
+          <!-- Hidden inputs for selected countries (populated by JavaScript) -->
+          <div id="country-hidden-inputs">
+            {% for country in selected_countries %}
+              <input type="hidden" name="country" value="{{ country }}">
+            {% endfor %}
+          </div>
         </div>
-
-
-        <button type="submit" class="btn btn-primary btn-sm mt-2">Apply Filters</button>
-      </form>
+      </div>
+      
+      <div class="col-sm">
+        <!-- Additional filters can go here -->
+        <div class="filter-group">
+          <!-- Placeholder for future filters -->
+        </div>
+      </div>
     </div>
-  </div>
+  </form>
 </div>
