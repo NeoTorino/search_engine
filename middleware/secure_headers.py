@@ -9,8 +9,8 @@ def apply_secure_headers(response):
     response.headers["Content-Security-Policy"] = (
         f"default-src 'self'; "
         f"img-src 'self' data:; "
-        f"style-src 'self' https://cdn.jsdelivr.net https://fonts.googleapis.com; "
+        f"style-src 'self' https://cdn.jsdelivr.net https://fonts.googleapis.com 'unsafe-inline'; "
         f"font-src 'self' https://fonts.gstatic.com; "
-        f"script-src 'self' https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com 'nonce-{nonce}';"
+        f"script-src 'self' https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://cdnjs.cloudflare.com 'nonce-{nonce}';"
     )
     return response

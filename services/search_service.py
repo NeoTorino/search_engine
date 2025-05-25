@@ -1,4 +1,5 @@
 import os
+import json
 from datetime import datetime, timedelta
 from markupsafe import escape
 import requests
@@ -35,6 +36,7 @@ def search_jobs(query, selected_countries=None, date_range=None, offset=0, size=
     results, total_results, country_counts, show_load_more = [], 0, {}, True
 
     try:
+        print(json.dumps(payload, indent=4))
         res = requests.get(url, auth=AUTH, json=payload, verify=False, timeout=5)
         if res.status_code == 200:
             data = res.json()

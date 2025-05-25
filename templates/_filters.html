@@ -1,6 +1,22 @@
 <div id="filters" class="container">
 
-  <form method="get" action="/" class="mb-0" id="filters-form">
+  <form method="get" action="/search" class="mb-0" id="filters-form">
+    
+    <div id="search-container" class="input-group mb-3">
+      <input
+            id="navbar-search-input"
+            class="form-control flex-grow-1"
+            type="search"
+            placeholder="Search"
+            aria-label="Search"
+            name="q"
+            value="{{ query|default('') }}"
+          />
+      <div class="input-group-append">
+        <button id="search-btn" class="btn btn-outline-primary ml-2" type="submit">Search</button>
+      </div>
+    </div>
+    
 
     <input type="hidden" name="q" value="{{ query }}" />
 

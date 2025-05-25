@@ -39,13 +39,14 @@ def search_results():
     date_range = None if days >= 30 else get_date_range_days(days)
 
     selected_countries = [sanitize_input(c) for c in request.args.getlist('country')]
-    #all_countries = get_all_countries()
-    #country_mapping = {c["value"]: c["label"].split(" (")[0] for c in all_countries}
-    #mapped_countries = [country_mapping.get(c.lower(), c) for c in selected_countries]
 
+    print(f"date_range: {date_range}")
+    print(f"selected_countries: {selected_countries}")
     results, total_results, country_counts, show_load_more = search_jobs(
         query, selected_countries, date_range, offset
     )
+    print(f"total_results: {total_results}")
+    print("-" * 40)
 
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         rendered_results = render_template('_results.html', results=results)
