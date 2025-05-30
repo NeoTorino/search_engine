@@ -1,3 +1,4 @@
+from datetime import datetime
 import secrets
 import urllib3
 from flask import Flask
@@ -26,6 +27,10 @@ def set_nonce():
 @app.context_processor
 def inject_nonce():
     return dict(nonce=g.csp_nonce)
+
+@app.context_processor
+def inject_now():
+    return {'year': datetime.utcnow().year}
 
 # Register secure headers
 app.after_request(apply_secure_headers)

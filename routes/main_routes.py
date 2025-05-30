@@ -1,4 +1,5 @@
 import time
+import json
 
 from flask import Blueprint, render_template, request, jsonify
 from services.utils import sanitize_input, get_date_range_days
@@ -48,9 +49,24 @@ def search_results():
     print(f"total_results: {total_results}")
     print("-" * 40)
 
+    # Handle AJAX requests
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        # For load more requests, only return the HTML results
+        if offset > 0:
+            rendered_results = render_template('_results.html', results=results)
+            return rendered_results
+        
+        # For filter changes (offset = 0), return JSON with metadata
         rendered_results = render_template('_results.html', results=results)
-        return rendered_results
+        
+        response_data = {
+            'html': rendered_results,
+            'total_results': total_results,
+            'country_counts': country_counts or {},
+            'show_load_more': show_load_more,
+            'query': query
+        }
+        return jsonify(response_data)
 
     return render_template(
         'index.html',

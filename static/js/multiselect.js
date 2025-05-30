@@ -32,11 +32,30 @@ class JobSearchMultiSelect {
         this.isOpen = false;
         this.placeholder = options.placeholder || 'All Countries';
 
+        // Store reference to this instance on the container for external access
+        this.container.multiselectInstance = this;
+
         this.init();
     }
 
     init() {
         this.bindEvents();
+        this.renderOptions();
+        this.updateButtonText();
+        this.updateHiddenInputs();
+    }
+
+    // Method to update options with new data (called when country counts change)
+    updateOptions(newOptions) {
+        const previouslySelected = new Set(this.selectedValues);
+        
+        this.allOptions = newOptions || [];
+        this.filteredOptions = [...this.allOptions];
+        
+        // Keep only selections that still exist in the new options
+        const availableValues = new Set(this.allOptions.map(opt => opt.value));
+        this.selectedValues = new Set([...previouslySelected].filter(val => availableValues.has(val)));
+        
         this.renderOptions();
         this.updateButtonText();
         this.updateHiddenInputs();

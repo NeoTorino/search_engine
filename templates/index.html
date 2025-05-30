@@ -5,11 +5,7 @@
 {% block content %}
     {% if not query %}
         <div class="container-fluid landing-container d-flex flex-column justify-content-center align-items-center">
-            <span id="typeit-text-values"
-                data-total-jobs="{{ total_jobs }}" 
-                data-total-orgs="{{ total_orgs }}">
-            </span>
-        {% include '_landing_search.html' %}
+            {% include '_landing.html' %}
         </div>
     {% else %}
         <!-- Search Results Page -->
@@ -44,5 +40,14 @@
             <p class="text-muted">No results found for "{{ query }}"</p>
         {% endif %}
         </div>
+    {% endif %}
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    {% if not query %}  
+        <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/landing-typeit.js') }}"></script>
+    {% else %}
+        <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/multiselect.js') }}"></script>
     {% endif %}
 {% endblock %}

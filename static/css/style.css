@@ -15,6 +15,7 @@ html, body {
   margin: 0;
   padding: 0;
   width: 100%;
+  height: 100%;
   overflow-x: hidden; /* Prevent unwanted horizontal scrollbars */
   background-color: #e6e5e5;
 }
@@ -22,10 +23,15 @@ html, body {
 body {
   margin: 0;
   padding: 0;
-  height: 100%;
+  display: flex;
+  flex-direction: column;
   font-family: var(--font-family);
   color: #212529;
   
+}
+
+main {
+  flex: 1;
 }
 
 .liner {
@@ -305,6 +311,12 @@ form.d-flex input.form-control {
   color: #f1f1f1
 }
 
+#load-more {
+  display: block;
+  margin: 20px auto;
+  width: fit-content;
+}
+
 .navbar {
   width: 100%;
   z-index: 1030;
@@ -468,3 +480,28 @@ input.styled-range::-moz-range-thumb {
   font-size: 0.85rem;
   font-weight: 500;
 }
+
+/* Footer */
+
+.footer {
+  background-color: #222;
+  color: #ddd;
+  font-family: 'Lora', serif;
+}
+
+.footer a {
+  color: #bbb;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.footer a:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.footer .container {
+  max-width: 960px;
+}
+
+/* END FOOTER */

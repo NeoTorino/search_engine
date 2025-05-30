@@ -1,4 +1,3 @@
-
 document.addEventListener('DOMContentLoaded', () => {
   let currentQuery = '';
 
@@ -15,14 +14,73 @@ document.addEventListener('DOMContentLoaded', () => {
     return fetch(url, options);
   }
 
+  // Function to update the results count text
+  function updateResultsCount(totalResults, query) {
+    const resultsCountElement = document.querySelector('.text-muted.liner');
+    if (resultsCountElement && query) {
+      const formattedCount = totalResults.toLocaleString();
+      const plural = totalResults !== 1 ? 's' : '';
+      resultsCountElement.innerHTML = `About ${formattedCount} result${plural} for "<strong>${query}</strong>"`;
+    }
+  }
+
+  // Function to update country counts in the multiselect
+  function updateCountryCounts(countryCounts) {
+    // Update the global variable so the multiselect can use it
+    window.countryCountsFromFlask = countryCounts;
+    
+    // Regenerate the countries array with new counts
+    if (countryCounts && typeof countryCounts === 'object' && Object.keys(countryCounts).length > 0) {
+      window.countriesFromFlask = Object.entries(countryCounts).map(([label, count]) => ({
+        value: label,
+        label: `${label} (${count})`
+      }));
+    } else {
+      window.countriesFromFlask = [];
+    }
+
+    // If multiselect instance exists, update its options
+    const multiselectContainer = document.getElementById('country-multiselect');
+    if (multiselectContainer && multiselectContainer.multiselectInstance) {
+      multiselectContainer.multiselectInstance.updateOptions(window.countriesFromFlask);
+    }
+  }
+
+  // Function to update load more button
+  function updateLoadMoreButton(showLoadMore, newOffset) {
+    const loadMoreBtn = document.getElementById('load-more');
+    if (loadMoreBtn) {
+      if (showLoadMore) {
+        loadMoreBtn.style.display = 'block';
+        loadMoreBtn.dataset.offset = newOffset || 12;
+      } else {
+        loadMoreBtn.style.display = 'none';
+      }
+    }
+  }
+
   window.fetchFilteredResults = function(queryParams) {
     const url = `/search?${queryParams}`;
     fetchWithAjaxHeader(url)
-      .then(response => response.text())
-      .then(html => {
+      .then(response => {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          return response.json();
+        } else {
+          return response.text().then(html => ({ html }));
+        }
+      })
+      .then(data => {
         const resultsContainer = document.getElementById('results-container');
         if (resultsContainer) {
-          resultsContainer.innerHTML = html;
+          resultsContainer.innerHTML = data.html;
+        }
+
+        // Update metadata if it's a JSON response (filter changes)
+        if (data.total_results !== undefined) {
+          updateResultsCount(data.total_results, data.query);
+          updateCountryCounts(data.country_counts || {});
+          updateLoadMoreButton(data.show_load_more, 12);
         }
       })
       .catch(error => {
@@ -90,17 +148,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const query = currentQuery || btn.dataset.query;
     const offset = parseInt(btn.dataset.offset) || 0;
 
-    const checkedCountries = [...document.querySelectorAll('input[name="country"]:checked')].map(cb => cb.value);
-    const datePosted = document.getElementById('date-slider')?.value || '';
-
     btn.disabled = true;
     btn.textContent = 'Loading...';
 
-    const params = new URLSearchParams();
-    params.append('q', query);
-    params.append('from', offset);
-    checkedCountries.forEach(c => params.append('country', c));
-    if (datePosted) params.append('date_posted', datePosted);
+    // Use the same method as filter functions to get all form data
+    const form = document.getElementById('filters-form');
+    const formData = new FormData(form);
+    
+    // Override the offset for load more
+    formData.set('from', offset);
+    
+    // Ensure the query is set
+    const sanitizedQuery = sanitizeInput(query);
+    formData.set('q', sanitizedQuery);
+
+    const params = new URLSearchParams(formData);
 
     try {
       const res = await fetchWithAjaxHeader(`/search?${params.toString()}`);
