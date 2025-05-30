@@ -59,10 +59,29 @@
         </div>
       </div>
       
-      <div class="col-sm">
-        <!-- Additional filters can go here -->
+      <div class="col-sm mt-3">
         <div class="filter-group">
-          <!-- Placeholder for future filters -->
+          <!-- ORGANIZATION FILTER -->
+          <div id="organization-multiselect" class="multiselect-container">
+            <button class="multiselect-button" type="button">
+              <span class="multiselect-text">All Organizations</span>
+              <div class="multiselect-arrow"></div>
+            </button>
+          
+            <div class="multiselect-dropdown">
+              <div class="multiselect-search">
+                <input type="text" placeholder="Search organizations..." id="organization-search">
+              </div>
+              <div id="organization-options" class="multiselect-options"></div>
+            </div>
+          </div>
+          
+          <!-- Hidden inputs for selected organizations (populated by JavaScript) -->
+          <div id="organization-hidden-inputs">
+            {% for organization in selected_organizations %}
+              <input type="hidden" name="organization" value="{{ organization }}">
+            {% endfor %}
+          </div>
         </div>
       </div>
     </div>

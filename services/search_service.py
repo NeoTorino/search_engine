@@ -9,7 +9,7 @@ OPENSEARCH_URL = "https://localhost:9200"
 INDEX_NAME = "jobs"
 AUTH = (os.getenv("USERNAME"), os.getenv("PASSWORD"))
 
-def search_jobs(query, selected_countries=None, date_range=None, offset=0, size=12):
+def search_jobs(query, selected_countries=None, selected_organizations=None, date_range=None, offset=0, size=12):
     url = f"{OPENSEARCH_URL}/{INDEX_NAME}/_search"
 
     payload = {
@@ -24,16 +24,21 @@ def search_jobs(query, selected_countries=None, date_range=None, offset=0, size=
         "aggs": {
             "countries": {
                 "terms": {"field": "country", "size": 100}
+            },
+            "organizations": {
+                "terms": {"field": "organization", "size": 100}
             }
         }
     }
 
     if selected_countries:
         payload["query"]["bool"]["filter"].append({"terms": {"country": selected_countries}})
+    if selected_organizations:
+        payload["query"]["bool"]["filter"].append({"terms": {"organization": selected_organizations}})
     if date_range:
         payload["query"]["bool"]["filter"].append({"range": {"date_posted": date_range}})
 
-    results, total_results, country_counts, show_load_more = [], 0, {}, True
+    results, total_results, country_counts, organization_counts, show_load_more = [], 0, {}, {}, True
 
     try:
         print(json.dumps(payload, indent=4))
@@ -42,8 +47,15 @@ def search_jobs(query, selected_countries=None, date_range=None, offset=0, size=
             data = res.json()
             hits = data.get('hits', {}).get('hits', [])
             total_results = data.get('hits', {}).get('total', {}).get('value', 0)
-            buckets = data.get('aggregations', {}).get('countries', {}).get('buckets', [])
-            country_counts = dict(sorted((b["key"], b["doc_count"]) for b in buckets))
+            
+            # Get country counts
+            country_buckets = data.get('aggregations', {}).get('countries', {}).get('buckets', [])
+            country_counts = dict(sorted((b["key"], b["doc_count"]) for b in country_buckets))
+            
+            # Get organization counts
+            org_buckets = data.get('aggregations', {}).get('organizations', {}).get('buckets', [])
+            organization_counts = dict(sorted((b["key"], b["doc_count"]) for b in org_buckets))
+            
             show_load_more = (offset + size) < total_results
 
             for hit in hits:
@@ -53,13 +65,14 @@ def search_jobs(query, selected_countries=None, date_range=None, offset=0, size=
                     "description": truncate_description(fix_encoding(job.get("description", ""))),
                     "country": escape(job.get("country", "").title()),
                     "organization": escape(job.get("organization", "").title()),
+                    "source": escape(job.get("source", "").title()),
                     "url": escape(job.get("url", "")),
                     "date_posted": escape(job.get("date_posted", ""))
                 })
     except Exception as e:
         print("Search error:", str(e))
 
-    return results, total_results, country_counts, show_load_more
+    return results, total_results, country_counts, organization_counts, show_load_more
 
 def get_landing_stats():
     stats = {"jobs": 0, "orgs": 0}

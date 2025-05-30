@@ -47,6 +47,16 @@
         </script>
         {% endif %}
 
+        {% if organization_counts is defined %}
+        <script nonce="{{ nonce }}">
+          window.organizationCountsFromFlask = {{ organization_counts | tojson }};
+        </script>
+        {% else %}
+        <script nonce="{{ nonce }}">
+          window.organizationCountsFromFlask = {};
+        </script>
+        {% endif %}
+
         {% if selected_countries is defined %}
         <script nonce="{{ nonce }}">
           window.selected_countries = {{ selected_countries | tojson }};
@@ -54,6 +64,16 @@
         {% else %}
         <script nonce="{{ nonce }}">
           window.selected_countries = [];
+        </script>
+        {% endif %}
+
+        {% if selected_organizations is defined %}
+        <script nonce="{{ nonce }}">
+          window.selected_organizations = {{ selected_organizations | tojson }};
+        </script>
+        {% else %}
+        <script nonce="{{ nonce }}">
+          window.selected_organizations = [];
         </script>
         {% endif %}
 

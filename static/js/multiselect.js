@@ -1,6 +1,8 @@
 // Ensure variables exist and have fallback values
 window.countryCountsFromFlask = window.countryCountsFromFlask || {};
+window.organizationCountsFromFlask = window.organizationCountsFromFlask || {};
 window.selected_countries = window.selected_countries || [];
+window.selected_organizations = window.selected_organizations || [];
 
 // Generate countries array once at the top level
 if (window.countryCountsFromFlask && typeof window.countryCountsFromFlask === 'object' && Object.keys(window.countryCountsFromFlask).length > 0) {
@@ -12,25 +14,39 @@ if (window.countryCountsFromFlask && typeof window.countryCountsFromFlask === 'o
     window.countriesFromFlask = [];
 }
 
+// Generate organizations array once at the top level
+if (window.organizationCountsFromFlask && typeof window.organizationCountsFromFlask === 'object' && Object.keys(window.organizationCountsFromFlask).length > 0) {
+    window.organizationsFromFlask = Object.entries(window.organizationCountsFromFlask).map(([label, count]) => ({
+        value: label,
+        label: `${label} (${count})`
+    }));
+} else {
+    window.organizationsFromFlask = [];
+}
 
 class JobSearchMultiSelect {
     constructor(container, options = {}) {
         this.container = container;
         this.button = container.querySelector('.multiselect-button');
         this.dropdown = container.querySelector('.multiselect-dropdown');
-        this.searchInput = container.querySelector('#country-search');
-        this.optionsContainer = container.querySelector('#country-options');
+        this.searchInput = container.querySelector('input[type="text"]');
+        this.optionsContainer = container.querySelector('.multiselect-options');
         this.arrow = container.querySelector('.multiselect-arrow');
         this.buttonText = container.querySelector('.multiselect-text');
-        this.hiddenInputsContainer = document.getElementById('country-hidden-inputs');
+        
+        // Determine filter type based on container ID
+        this.filterType = container.id.includes('country') ? 'country' : 'organization';
+        this.hiddenInputsContainer = document.getElementById(`${this.filterType}-hidden-inputs`);
 
         this.selectedValues = new Set(options.preselected || []);
         
-        // Use the globally generated countriesFromFlask
-        this.allOptions = window.countriesFromFlask || [];
+        // Use the appropriate data source
+        this.allOptions = this.filterType === 'country' ? 
+            (window.countriesFromFlask || []) : 
+            (window.organizationsFromFlask || []);
         this.filteredOptions = [...this.allOptions];
         this.isOpen = false;
-        this.placeholder = options.placeholder || 'All Countries';
+        this.placeholder = options.placeholder || (this.filterType === 'country' ? 'All Countries' : 'All Organizations');
 
         // Store reference to this instance on the container for external access
         this.container.multiselectInstance = this;
@@ -45,7 +61,7 @@ class JobSearchMultiSelect {
         this.updateHiddenInputs();
     }
 
-    // Method to update options with new data (called when country counts change)
+    // Method to update options with new data (called when counts change)
     updateOptions(newOptions) {
         const previouslySelected = new Set(this.selectedValues);
         
@@ -86,7 +102,8 @@ class JobSearchMultiSelect {
         const options = optionsToRender || this.filteredOptions;
 
         if (options.length === 0) {
-            this.optionsContainer.innerHTML = '<div class="no-results">No countries found</div>';
+            const noResultsText = this.filterType === 'country' ? 'No countries found' : 'No organizations found';
+            this.optionsContainer.innerHTML = `<div class="no-results">${noResultsText}</div>`;
             return;
         }
 
@@ -139,7 +156,8 @@ class JobSearchMultiSelect {
             const selectedOption = this.allOptions.find(opt => this.selectedValues.has(opt.value));
             this.buttonText.innerHTML = selectedOption ? selectedOption.label : 'Selected';
         } else {
-            this.buttonText.innerHTML = `${count} countries selected`;
+            const itemType = this.filterType === 'country' ? 'countries' : 'organizations';
+            this.buttonText.innerHTML = `${count} ${itemType} selected`;
         }
     }
 
@@ -148,7 +166,7 @@ class JobSearchMultiSelect {
         this.selectedValues.forEach(value => {
             const input = document.createElement('input');
             input.type = 'hidden';
-            input.name = 'country';
+            input.name = this.filterType;
             input.value = value;
             this.hiddenInputsContainer.appendChild(input);
         });
@@ -172,9 +190,21 @@ class JobSearchMultiSelect {
             params.set('date_posted_days', dateSlider.value);
         }
 
-        this.selectedValues.forEach(value => {
-            params.append('country', value);
-        });
+        // Add country selections
+        const countryMultiselect = document.getElementById('country-multiselect');
+        if (countryMultiselect && countryMultiselect.multiselectInstance) {
+            countryMultiselect.multiselectInstance.selectedValues.forEach(value => {
+                params.append('country', value);
+            });
+        }
+
+        // Add organization selections
+        const organizationMultiselect = document.getElementById('organization-multiselect');
+        if (organizationMultiselect && organizationMultiselect.multiselectInstance) {
+            organizationMultiselect.multiselectInstance.selectedValues.forEach(value => {
+                params.append('organization', value);
+            });
+        }
 
         return params.toString();
     }
@@ -209,14 +239,25 @@ class JobSearchMultiSelect {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-    const container = document.getElementById('country-multiselect');
-    if (container && window.countriesFromFlask && window.countriesFromFlask.length > 0) {
-        new JobSearchMultiSelect(container, {
+    // Initialize country multiselect
+    const countryContainer = document.getElementById('country-multiselect');
+    if (countryContainer && window.countriesFromFlask && window.countriesFromFlask.length > 0) {
+        new JobSearchMultiSelect(countryContainer, {
             preselected: window.selected_countries || [],
             placeholder: 'All Countries'
         });
-    } else if (container) {
-        console.log("Multiselect container found but no country data available");
-        // You could show a message or hide the component here
+    } else if (countryContainer) {
+        console.log("Country multiselect container found but no country data available");
+    }
+
+    // Initialize organization multiselect
+    const organizationContainer = document.getElementById('organization-multiselect');
+    if (organizationContainer && window.organizationsFromFlask && window.organizationsFromFlask.length > 0) {
+        new JobSearchMultiSelect(organizationContainer, {
+            preselected: window.selected_organizations || [],
+            placeholder: 'All Organizations'
+        });
+    } else if (organizationContainer) {
+        console.log("Organization multiselect container found but no organization data available");
     }
 });

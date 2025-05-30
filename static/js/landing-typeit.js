@@ -19,10 +19,11 @@ document.addEventListener('DOMContentLoaded', () => {
         loop: false,
         waitUntilVisible: false
       })
-        .type(`${totalJobs} jobs across ${totalOrgs} organizations. `, { delay: 1000 })
+        .type(`${totalJobs} jobs, ${totalOrgs} organizations. `, { delay: 500 })
         .break()
-        .type('No fake jobs. ', { delay: 1000 })
-        .type('No <em>middle man.</em>', { delay: 0 })
+        .type('Search once, find everything', { delay: 500 })
+        .break()
+        .type('Your comprehensive job aggregator', { delay: 500 })
         .go();
     }
   }

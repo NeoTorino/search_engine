@@ -46,6 +46,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Function to update organization counts in the multiselect
+  function updateOrganizationCounts(organizationCounts) {
+    // Update the global variable so the multiselect can use it
+    window.organizationCountsFromFlask = organizationCounts;
+    
+    // Regenerate the organizations array with new counts
+    if (organizationCounts && typeof organizationCounts === 'object' && Object.keys(organizationCounts).length > 0) {
+      window.organizationsFromFlask = Object.entries(organizationCounts).map(([label, count]) => ({
+        value: label,
+        label: `${label} (${count})`
+      }));
+    } else {
+      window.organizationsFromFlask = [];
+    }
+
+    // If multiselect instance exists, update its options
+    const multiselectContainer = document.getElementById('organization-multiselect');
+    if (multiselectContainer && multiselectContainer.multiselectInstance) {
+      multiselectContainer.multiselectInstance.updateOptions(window.organizationsFromFlask);
+    }
+  }
+
   // Function to update load more button
   function updateLoadMoreButton(showLoadMore, newOffset) {
     const loadMoreBtn = document.getElementById('load-more');
@@ -80,6 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (data.total_results !== undefined) {
           updateResultsCount(data.total_results, data.query);
           updateCountryCounts(data.country_counts || {});
+          updateOrganizationCounts(data.organization_counts || {});
           updateLoadMoreButton(data.show_load_more, 12);
         }
       })
@@ -134,7 +157,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const form = slider.closest('form');
       const formData = new FormData(form);
       const sanitizedQuery = sanitizeInput(currentQuery);
-      // const sanitized = DOMPurify.sanitize(input.value);
       formData.append('q', sanitizedQuery); // ensure sanitized query is sent
       const params = new URLSearchParams(formData);
       fetchFilteredResults(params.toString());
@@ -223,9 +245,21 @@ document.addEventListener('DOMContentLoaded', () => {
           updateLabelAndColor(slider.max);
         }
 
-        const checkboxes = document.querySelectorAll('input[name="country"]');
-        checkboxes.forEach(cb => cb.checked = false);
+        // Reset country multiselect
+        const countryMultiselect = document.getElementById('country-multiselect');
+        if (countryMultiselect && countryMultiselect.multiselectInstance) {
+          countryMultiselect.multiselectInstance.setSelectedValues([]);
+        }
 
+        // Reset organization multiselect
+        const organizationMultiselect = document.getElementById('organization-multiselect');
+        if (organizationMultiselect && organizationMultiselect.multiselectInstance) {
+          organizationMultiselect.multiselectInstance.setSelectedValues([]);
+        }
+
+        // Legacy checkbox reset (if any exist)
+        const checkboxes = document.querySelectorAll('input[name="country"], input[name="organization"]');
+        checkboxes.forEach(cb => cb.checked = false);
       }
     });
   }
