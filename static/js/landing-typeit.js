@@ -21,9 +21,9 @@ document.addEventListener('DOMContentLoaded', () => {
       })
         .type(`${totalJobs} jobs, ${totalOrgs} organizations. `, { delay: 500 })
         .break()
-        .type('Search once, find everything', { delay: 500 })
+        .type('Search once, find everything.', { delay: 500 })
         .break()
-        .type('Your comprehensive job aggregator', { delay: 500 })
+        .type('Your comprehensive job aggregator.', { delay: 500 })
         .go();
     }
   }

@@ -62,7 +62,7 @@ def search_jobs(query, selected_countries=None, selected_organizations=None, dat
                 job = hit.get("_source", {})
                 results.append({
                     "title": escape(job.get("title", "No Title")),
-                    "description": truncate_description(fix_encoding(job.get("description", ""))),
+                    "description": truncate_description(fix_encoding(job.get("summary", ""))),
                     "country": escape(job.get("country", "").title()),
                     "organization": escape(job.get("organization", "").title()),
                     "source": escape(job.get("source", "").title()),
