@@ -64,7 +64,7 @@ def search_jobs(query, selected_countries=None, selected_organizations=None, dat
                     "title": escape(job.get("title", "No Title")),
                     "description": truncate_description(fix_encoding(job.get("summary", ""))),
                     "country": escape(job.get("country", "").title()),
-                    "organization": escape(job.get("organization", "").title()),
+                    "organization": escape(job.get("organization", "")),
                     "source": escape(job.get("source", "").title()),
                     "url": escape(job.get("url", "")),
                     "date_posted": escape(job.get("date_posted", ""))

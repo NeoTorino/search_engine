@@ -36,7 +36,7 @@ def get_all_organizations(query=None):
             buckets = res.json().get('aggregations', {}).get('organizations', {}).get('buckets', [])
             return [{
                 "value": b["key"].lower(),
-                "label": f"{b['key'].title()} ({b['doc_count']})",
+                "label": f"{b['key']} ({b['doc_count']})",
                 "count": b["doc_count"]
             } for b in buckets]
     except Exception as e:
