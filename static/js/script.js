@@ -17,10 +17,16 @@ document.addEventListener('DOMContentLoaded', () => {
   // Function to update the results count text
   function updateResultsCount(totalResults, query) {
     const resultsCountElement = document.querySelector('.text-muted.liner');
-    if (resultsCountElement && query) {
+    if (resultsCountElement) {
       const formattedCount = totalResults.toLocaleString();
       const plural = totalResults !== 1 ? 's' : '';
-      resultsCountElement.innerHTML = `About ${formattedCount} result${plural} for "<strong>${query}</strong>"`;
+      
+      // Handle empty query display
+      if (!query || query.trim() === '') {
+        resultsCountElement.innerHTML = `About ${formattedCount} result${plural} (showing all jobs)`;
+      } else {
+        resultsCountElement.innerHTML = `About ${formattedCount} result${plural} for "<strong>${query}</strong>"`;
+      }
     }
   }
 
@@ -69,17 +75,63 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Function to update load more button
-  function updateLoadMoreButton(showLoadMore, newOffset) {
+  function updateLoadMoreButton(showLoadMore, newOffset, query = '') {
     const loadMoreBtn = document.getElementById('load-more');
     if (loadMoreBtn) {
       if (showLoadMore) {
         loadMoreBtn.style.display = 'block';
         loadMoreBtn.dataset.offset = newOffset || 12;
+        loadMoreBtn.dataset.query = query || '';
       } else {
         loadMoreBtn.style.display = 'none';
       }
     }
   }
+
+  // Function to handle "Reset Filters" functionality
+  window.resetFilters = function() {
+    // Keep the current search query
+    const queryInput = document.querySelector('input[name="q"]');
+    const currentSearchQuery = queryInput ? queryInput.value : '';
+    
+    // Reset date slider
+    if (slider) {
+      slider.value = slider.max;
+      updateLabelAndColor(slider.max);
+    }
+
+    // Reset country multiselect
+    const countryMultiselect = document.getElementById('country-multiselect');
+    if (countryMultiselect && countryMultiselect.multiselectInstance) {
+      countryMultiselect.multiselectInstance.setSelectedValues([]);
+    }
+
+    // Reset organization multiselect
+    const organizationMultiselect = document.getElementById('organization-multiselect');
+    if (organizationMultiselect && organizationMultiselect.multiselectInstance) {
+      organizationMultiselect.multiselectInstance.setSelectedValues([]);
+    }
+
+    // Legacy checkbox reset (if any exist)
+    const checkboxes = document.querySelectorAll('input[name="country"], input[name="organization"]');
+    checkboxes.forEach(cb => cb.checked = false);
+
+    // Update currentQuery to keep the search term
+    currentQuery = sanitizeInput(currentSearchQuery);
+    
+    // Get the form and create parameters with current query but reset filters
+    const form = document.getElementById('filters-form') || document.querySelector('form');
+    if (form) {
+      const formData = new FormData(form);
+      formData.set('q', currentQuery); // Keep the search query
+      formData.set('date_posted_days', '30'); // Reset to default
+      // Remove all country and organization filters
+      formData.delete('country');
+      formData.delete('organization');
+      const params = new URLSearchParams(formData);
+      fetchFilteredResults(params.toString());
+    }
+  };
 
   window.fetchFilteredResults = function(queryParams) {
     const url = `/search?${queryParams}`;
@@ -103,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
           updateResultsCount(data.total_results, data.query);
           updateCountryCounts(data.country_counts || {});
           updateOrganizationCounts(data.organization_counts || {});
-          updateLoadMoreButton(data.show_load_more, 12);
+          updateLoadMoreButton(data.show_load_more, 12, data.query);
         }
       })
       .catch(error => {
@@ -143,7 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const form = slider.closest('form');
       const formData = new FormData(form);
       const sanitizedQuery = sanitizeInput(currentQuery);
-      formData.append('q', sanitizedQuery); // ensure sanitized query is sent
+      formData.set('q', sanitizedQuery); // ensure sanitized query is sent (can be empty)
       const params = new URLSearchParams(formData);
       fetchFilteredResults(params.toString());
     }, 300);
@@ -157,7 +209,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const form = slider.closest('form');
       const formData = new FormData(form);
       const sanitizedQuery = sanitizeInput(currentQuery);
-      formData.append('q', sanitizedQuery); // ensure sanitized query is sent
+      formData.set('q', sanitizedQuery); // ensure sanitized query is sent (can be empty)
       const params = new URLSearchParams(formData);
       fetchFilteredResults(params.toString());
     });
@@ -167,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Handle Load More functionality
   document.getElementById('load-more')?.addEventListener('click', async function () {
     const btn = this;
-    const query = currentQuery || btn.dataset.query;
+    const query = currentQuery || btn.dataset.query || ''; // Allow empty query
     const offset = parseInt(btn.dataset.offset) || 0;
 
     btn.disabled = true;
@@ -180,7 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Override the offset for load more
     formData.set('from', offset);
     
-    // Ensure the query is set
+    // Ensure the query is set (can be empty)
     const sanitizedQuery = sanitizeInput(query);
     formData.set('q', sanitizedQuery);
 
@@ -236,31 +288,40 @@ document.addEventListener('DOMContentLoaded', () => {
       const input = document.getElementById('navbar-search-input');
       const rawQuery = input.value.trim();
       const query = sanitizeInput(rawQuery);
-      if (query) {
-        currentQuery = query;
+      
+      // Allow empty queries - set currentQuery to empty string if no query
+      currentQuery = query;
 
-        // Reset filters
-        if (slider) {
-          slider.value = slider.max;
-          updateLabelAndColor(slider.max);
-        }
-
-        // Reset country multiselect
-        const countryMultiselect = document.getElementById('country-multiselect');
-        if (countryMultiselect && countryMultiselect.multiselectInstance) {
-          countryMultiselect.multiselectInstance.setSelectedValues([]);
-        }
-
-        // Reset organization multiselect
-        const organizationMultiselect = document.getElementById('organization-multiselect');
-        if (organizationMultiselect && organizationMultiselect.multiselectInstance) {
-          organizationMultiselect.multiselectInstance.setSelectedValues([]);
-        }
-
-        // Legacy checkbox reset (if any exist)
-        const checkboxes = document.querySelectorAll('input[name="country"], input[name="organization"]');
-        checkboxes.forEach(cb => cb.checked = false);
+      // Reset filters
+      if (slider) {
+        slider.value = slider.max;
+        updateLabelAndColor(slider.max);
       }
+
+      // Reset country multiselect
+      const countryMultiselect = document.getElementById('country-multiselect');
+      if (countryMultiselect && countryMultiselect.multiselectInstance) {
+        countryMultiselect.multiselectInstance.setSelectedValues([]);
+      }
+
+      // Reset organization multiselect
+      const organizationMultiselect = document.getElementById('organization-multiselect');
+      if (organizationMultiselect && organizationMultiselect.multiselectInstance) {
+        organizationMultiselect.multiselectInstance.setSelectedValues([]);
+      }
+
+      // Legacy checkbox reset (if any exist)
+      const checkboxes = document.querySelectorAll('input[name="country"], input[name="organization"]');
+      checkboxes.forEach(cb => cb.checked = false);
+    });
+  }
+
+  // Add event listener for "Reset Filters" button if it exists
+  const resetButton = document.getElementById('reset-filters');
+  if (resetButton) {
+    resetButton.addEventListener('click', function(e) {
+      e.preventDefault();
+      resetFilters();
     });
   }
 });

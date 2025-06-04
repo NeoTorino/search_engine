@@ -3,19 +3,24 @@
 {% block title %}Job Search{% if query %} - "{{ query }}"{% endif %}{% endblock %}
 
 {% block content %}
-    {% if not query %}
+    {% if query is not defined %}
+        <!-- Only show landing page when query is completely undefined (i.e., root route) -->
         <div class="container-fluid landing-container d-flex flex-column justify-content-center align-items-center">
             {% include '_landing.html' %}
         </div>
     {% else %}
-        <!-- Search Results Page -->
+        <!-- Search Results Page (including empty queries) -->
         <div class="container py-4">
         
         <!-- Filters -->
         {% include '_filters.html' %}
 
         <p class="text-muted liner">
-            About {{ "{:,}".format(total_results) }} result{{ total_results != 1 and 's' or '' }} for "<strong>{{ query }}</strong>"
+            {% if is_empty_query %}
+                Showing all {{ "{:,}".format(total_results) }} result{{ total_results != 1 and 's' or '' }}
+            {% else %}
+                About {{ "{:,}".format(total_results) }} result{{ total_results != 1 and 's' or '' }} for "<strong>{{ query }}</strong>"
+            {% endif %}
         </p>
 
         <!-- Results -->
@@ -37,7 +42,11 @@
             </div>
             {% endif %}
         {% else %}
-            <p class="text-muted">No results found for "{{ query }}"</p>
+            {% if is_empty_query %}
+                <p class="text-muted">No results found</p>
+            {% else %}
+                <p class="text-muted">No results found for "{{ query }}"</p>
+            {% endif %}
         {% endif %}
         </div>
     {% endif %}
@@ -45,7 +54,7 @@
 
 {% block scripts %}
     {{ super() }}
-    {% if not query %}  
+    {% if query is not defined %}  
         <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/landing-typeit.js') }}"></script>
     {% else %}
         <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/multiselect.js') }}"></script>

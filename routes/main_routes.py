@@ -19,6 +19,7 @@ def api_organizations():
     organizations = get_all_organizations()
     return jsonify(organizations)
 
+
 @main.route("/", methods=["GET"])
 def index():
     total_jobs, total_orgs = get_landing_stats()
@@ -26,12 +27,16 @@ def index():
                             total_jobs=total_jobs,
                             total_orgs=total_orgs,
                             time=time)
+    # Note: NO 'query' variable is passed here
+
 
 @main.route("/search")
 def search_results():
-
     raw_query = request.args.get("q", "")
-    query = sanitize_input(raw_query)
+    query = sanitize_input(raw_query) if raw_query else ""
+    
+    # Check if this is an empty query search request
+    is_empty_query = not query or query.isspace()
 
     try:
         offset = int(request.args.get('from', 0))
@@ -48,38 +53,42 @@ def search_results():
     selected_countries = [sanitize_input(c) for c in request.args.getlist('country')]
     selected_organizations = [sanitize_input(o) for o in request.args.getlist('organization')]
 
+    print(f"query: '{query}' (empty: {is_empty_query})")
     print(f"date_range: {date_range}")
     print(f"selected_countries: {selected_countries}")
     print(f"selected_organizations: {selected_organizations}")
+    
     results, total_results, country_counts, organization_counts, show_load_more = search_jobs(
         query, selected_countries, selected_organizations, date_range, offset
     )
     print(f"total_results: {total_results}")
     print("-" * 40)
 
-    # Handle AJAX requests
+    # Handle AJAX requests (including empty query searches)
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         # For load more requests, only return the HTML results
         if offset > 0:
             rendered_results = render_template('_results.html', results=results)
             return rendered_results
-        
-        # For filter changes (offset = 0), return JSON with metadata
+
+        # For filter changes or empty query searches (offset = 0), return JSON with metadata
         rendered_results = render_template('_results.html', results=results)
-        
+
         response_data = {
             'html': rendered_results,
             'total_results': total_results,
             'country_counts': country_counts or {},
             'organization_counts': organization_counts or {},
             'show_load_more': show_load_more,
-            'query': query
+            'query': query,
+            'is_empty_query': is_empty_query
         }
         return jsonify(response_data)
 
+    # Always show search results page (even for empty queries)
     return render_template(
         'index.html',
-        query=query,
+        query=query,  # Always pass query variable (even if empty string)
         offset=offset,
         results=results,
         total_results=total_results,
@@ -89,6 +98,7 @@ def search_results():
         selected_countries=selected_countries or [],
         selected_organizations=selected_organizations or [],
         date_posted_days=days,
+        is_empty_query=is_empty_query,  # Always pass this flag
         time=time
     )
 

@@ -42,16 +42,23 @@
     white-space: nowrap;
 }
 
+/* Fixed: Remove CSS arrow styles and keep only SVG styling */
 .multiselect-arrow {
-    width: 0;
-    height: 0;
-    border-left: 4px solid transparent;
-    border-right: 4px solid transparent;
-    border-top: 4px solid #6c757d;
+    display: flex;
+    align-items: center;
+    color: #6c757d;
     transition: transform 0.2s;
 }
 
 .multiselect-arrow.up {
+    transform: rotate(180deg);
+}
+
+.multiselect-arrow svg {
+    transition: transform 0.2s;
+}
+
+.multiselect-button.open .multiselect-arrow svg {
     transform: rotate(180deg);
 }
 

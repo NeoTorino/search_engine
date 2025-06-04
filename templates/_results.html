@@ -4,26 +4,41 @@
     <div class="card h-100">
       <div class="card-header">
         <h5 class="card-title">{{ job.title }}</h5>
-        <p>
-          {% if job.organization %}
-          <span class="badge badge-secondary">{{ job.organization }}</span>
-          {% endif %}
-          {% if job.country %}
-          <span class="badge badge-secondary">{{ job.country }}</span>
-          {% endif %}
-          {% if job.source %}
-          <span class="badge badge-info">{{ job.source }}</span>
-          {% endif %}
-          {% if job.date_posted %}
-          <span class="badge badge-secondary">{{ job.date_posted|format_date }}</span>
-          {% endif %}
-        </p>
       </div>
-      <div class="card-body d-flex flex-column">
+
+      <div class="card-footer bg-transparent border-secondary">
+        <ul class="list-group list-group-flush">
+          {% if job.organization %}
+            <li class="list-group-item">
+              <b>Organization:</b> {{ job.organization }}
+            </li>
+            {% endif %}
+          
+          {% if job.country %}
+            <li class="list-group-item">
+              <b>Country:</b> {{ job.country }}
+            </li>
+          {% endif %}
+
+          {% if job.source %}
+            <li class="list-group-item">
+              <b>Source:</b> {{ job.source }}
+            </li>
+          {% endif %}
+
+          {% if job.date_posted %}
+            <li class="list-group-item">
+            <b>Date Posted:</b> {{ job.date_posted|format_date }}
+            </li>
+          {% endif %}
+        </ul>
+        
+      </div>
+      <!-- <div class="card-body d-flex flex-column">
         {% if job.date_posted %}
         <p class="card-text mt-auto">{{ job.description }}</p>
         {% endif %}
-      </div>
+      </div> -->
     </div>
   </a>
 </div>
