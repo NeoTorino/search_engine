@@ -9,17 +9,6 @@ from services.organization_service import get_all_organizations
 
 main = Blueprint('main', __name__)
 
-@main.route("/api/countries", methods=["GET"])
-def api_countries():
-    countries = get_all_countries()
-    return jsonify(countries)
-
-@main.route("/api/organizations", methods=["GET"])
-def api_organizations():
-    organizations = get_all_organizations()
-    return jsonify(organizations)
-
-
 @main.route("/", methods=["GET"])
 def index():
     total_jobs, total_orgs = get_landing_stats()

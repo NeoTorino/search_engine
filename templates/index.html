@@ -56,7 +56,5 @@
     {{ super() }}
     {% if query is not defined %}  
         <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/landing-typeit.js') }}"></script>
-    {% else %}
-        <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/multiselect.js') }}"></script>
     {% endif %}
 {% endblock %}

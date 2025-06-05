@@ -1,5 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
   let currentQuery = '';
+  let filtersVisible = false; // Track filter visibility state
+
+  $('.selectpicker').selectpicker();
 
   function sanitizeInput(input) {
     // Remove script tags or HTML tags
@@ -12,6 +15,45 @@ document.addEventListener('DOMContentLoaded', () => {
     options.headers = options.headers || {};
     options.headers['X-Requested-With'] = 'XMLHttpRequest';
     return fetch(url, options);
+  }
+
+  // Function to toggle filters visibility
+  function toggleFilters() {
+    const filtersContainer = document.getElementById('filters');
+    const toggleButton = document.getElementById('toggle-filters');
+    const toggleText = document.getElementById('toggle-filters-text');
+    
+    if (!filtersContainer || !toggleButton || !toggleText) return;
+    
+    filtersVisible = !filtersVisible;
+    
+    if (filtersVisible) {
+      // Show filters
+      filtersContainer.classList.remove('hidden');
+      filtersContainer.classList.add('visible');
+      toggleButton.classList.add('active');
+      toggleText.textContent = 'Hide Filters';
+    } else {
+      // Hide filters
+      filtersContainer.classList.remove('visible');
+      filtersContainer.classList.add('hidden');
+      toggleButton.classList.remove('active');
+      toggleText.textContent = 'Show Filters';
+    }
+  }
+
+  // Initialize filters as hidden when on results page
+  function initializeFiltersState() {
+    const filtersContainer = document.getElementById('filters');
+    const toggleButton = document.getElementById('toggle-filters');
+    
+    if (filtersContainer && toggleButton) {
+      // On page load, filters should be hidden
+      filtersContainer.classList.add('hidden');
+      filtersContainer.classList.remove('visible');
+      toggleButton.classList.remove('active');
+      filtersVisible = false;
+    }
   }
 
   // Function to update the results count text
@@ -101,20 +143,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Reset country multiselect
-    const countryMultiselect = document.getElementById('country-multiselect');
-    if (countryMultiselect && countryMultiselect.multiselectInstance) {
-      countryMultiselect.multiselectInstance.setSelectedValues([]);
-    }
-
-    // Reset organization multiselect
-    const organizationMultiselect = document.getElementById('organization-multiselect');
-    if (organizationMultiselect && organizationMultiselect.multiselectInstance) {
-      organizationMultiselect.multiselectInstance.setSelectedValues([]);
-    }
-
-    // Legacy checkbox reset (if any exist)
-    const checkboxes = document.querySelectorAll('input[name="country"], input[name="organization"]');
-    checkboxes.forEach(cb => cb.checked = false);
+    $('#country-select').selectpicker('deselectAll');
+    $('#organization-select').selectpicker('deselectAll');
 
     // Update currentQuery to keep the search term
     currentQuery = sanitizeInput(currentSearchQuery);
@@ -167,14 +197,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const label = document.getElementById('date-slider-label');
 
   if (slider) {
-    function debounce(func, wait) {
-      let timeout;
-      return function(...args) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func.apply(this, args), wait);
-      };
-    }
-
     function updateLabelAndColor(value) {
       const val = parseInt(value);
       const max = parseInt(slider.max);
@@ -191,29 +213,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateLabelAndColor(slider.value);
 
-    const debounceFetchFilteredResults = debounce(() => {
-      const form = slider.closest('form');
-      const formData = new FormData(form);
-      const sanitizedQuery = sanitizeInput(currentQuery);
-      formData.set('q', sanitizedQuery); // ensure sanitized query is sent (can be empty)
-      const params = new URLSearchParams(formData);
-      fetchFilteredResults(params.toString());
-    }, 300);
-    
+    // REMOVED: Real-time slider updates - now only updates the visual label
     slider.addEventListener('input', (e) => {
       updateLabelAndColor(e.target.value);
-      debounceFetchFilteredResults();
+      // No longer triggers fetchFilteredResults automatically
     });
     
-    slider.addEventListener('change', (e) => {
-      const form = slider.closest('form');
-      const formData = new FormData(form);
-      const sanitizedQuery = sanitizeInput(currentQuery);
-      formData.set('q', sanitizedQuery); // ensure sanitized query is sent (can be empty)
-      const params = new URLSearchParams(formData);
-      fetchFilteredResults(params.toString());
-    });
-    
+    // REMOVED: Real-time slider change event
+    // slider.addEventListener('change', (e) => { ... });
   }
 
   // Handle Load More functionality
@@ -281,18 +288,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Handle navbar form submission
+  // Handle navbar form submission (Search button)
   const navbarForm = document.querySelector('.navbar-search-form');
   if (navbarForm) {
     navbarForm.addEventListener('submit', (e) => {
+      e.preventDefault(); // Prevent default form submission
+      
       const input = document.getElementById('navbar-search-input');
       const rawQuery = input.value.trim();
       const query = sanitizeInput(rawQuery);
       
-      // Allow empty queries - set currentQuery to empty string if no query
+      // Set currentQuery
       currentQuery = query;
 
-      // Reset filters
+      // Reset ALL filters when searching
       if (slider) {
         slider.value = slider.max;
         updateLabelAndColor(slider.max);
@@ -313,10 +322,57 @@ document.addEventListener('DOMContentLoaded', () => {
       // Legacy checkbox reset (if any exist)
       const checkboxes = document.querySelectorAll('input[name="country"], input[name="organization"]');
       checkboxes.forEach(cb => cb.checked = false);
+
+      // Also update the main search input in the filters form to match
+      const mainSearchInput = document.querySelector('input[name="q"]');
+      if (mainSearchInput) {
+        mainSearchInput.value = currentQuery;
+      }
+
+      // Create clean search with reset filters
+      const params = new URLSearchParams();
+      params.set('q', currentQuery);
+      params.set('date_posted_days', '30'); // Reset to default
+      // Don't add any country or organization parameters (they're reset)
+      
+      // Fetch results with clean filters
+      fetchFilteredResults(params.toString());
     });
   }
 
-  // Add event listener for "Reset Filters" button if it exists
+  // NEW: Handle Toggle Filters button
+  const toggleFiltersButton = document.getElementById('toggle-filters');
+  if (toggleFiltersButton) {
+    toggleFiltersButton.addEventListener('click', function(e) {
+      e.preventDefault();
+      toggleFilters();
+    });
+  }
+
+  // NEW: Handle Update Filters button
+  const updateButton = document.getElementById('update-filters');
+  if (updateButton) {
+    updateButton.addEventListener('click', function(e) {
+      e.preventDefault();
+      
+      // Get current search query
+      const queryInput = document.querySelector('input[name="q"]');
+      const rawQuery = queryInput ? queryInput.value.trim() : '';
+      const query = sanitizeInput(rawQuery);
+      currentQuery = query;
+
+      // Get the form and create parameters with all current filter values
+      const form = document.getElementById('filters-form');
+      if (form) {
+        const formData = new FormData(form);
+        formData.set('q', currentQuery); // Ensure sanitized query is sent
+        const params = new URLSearchParams(formData);
+        fetchFilteredResults(params.toString());
+      }
+    });
+  }
+
+  // Handle "Reset Filters" button
   const resetButton = document.getElementById('reset-filters');
   if (resetButton) {
     resetButton.addEventListener('click', function(e) {
@@ -324,4 +380,68 @@ document.addEventListener('DOMContentLoaded', () => {
       resetFilters();
     });
   }
+
+  // NEW: Also handle form submission from the filters form itself (if needed)
+  const filtersForm = document.getElementById('filters-form');
+  if (filtersForm) {
+    filtersForm.addEventListener('submit', function(e) {
+      e.preventDefault(); // Prevent default form submission
+      
+      // Check if this is a search submission (search button clicked)
+      const searchButton = document.getElementById('search-btn');
+      const activeElement = document.activeElement;
+      
+      if (activeElement === searchButton || e.submitter === searchButton) {
+        // This is a search - reset all filters
+        const queryInput = document.querySelector('input[name="q"]');
+        const rawQuery = queryInput ? queryInput.value.trim() : '';
+        const query = sanitizeInput(rawQuery);
+        currentQuery = query;
+
+        // Reset ALL filters
+        if (slider) {
+          slider.value = slider.max;
+          updateLabelAndColor(slider.max);
+        }
+
+        // Reset country multiselect
+        const countryMultiselect = document.getElementById('country-multiselect');
+        if (countryMultiselect && countryMultiselect.multiselectInstance) {
+          countryMultiselect.multiselectInstance.setSelectedValues([]);
+        }
+
+        // Reset organization multiselect
+        const organizationMultiselect = document.getElementById('organization-multiselect');
+        if (organizationMultiselect && organizationMultiselect.multiselectInstance) {
+          organizationMultiselect.multiselectInstance.setSelectedValues([]);
+        }
+
+        // Sync search inputs
+        const navbarSearchInput = document.getElementById('navbar-search-input');
+        if (navbarSearchInput) {
+          navbarSearchInput.value = currentQuery;
+        }
+
+        // Create clean search with reset filters
+        const params = new URLSearchParams();
+        params.set('q', currentQuery);
+        params.set('date_posted_days', '30'); // Reset to default
+        fetchFilteredResults(params.toString());
+      } else {
+        // This is a regular filter update
+        const queryInput = document.querySelector('input[name="q"]');
+        const rawQuery = queryInput ? queryInput.value.trim() : '';
+        const query = sanitizeInput(rawQuery);
+        currentQuery = query;
+
+        const formData = new FormData(this);
+        formData.set('q', currentQuery);
+        const params = new URLSearchParams(formData);
+        fetchFilteredResults(params.toString());
+      }
+    });
+  }
+
+  // Initialize filters state on page load
+  initializeFiltersState();
 });

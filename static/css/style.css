@@ -92,6 +92,8 @@ a.no-underline:focus {
   height: 100%; /* full height to match sibling cards */
   transition: box-shadow 0.3s ease;
   cursor: pointer;
+  z-index: 1;
+  position: relative;
 }
 
 .card:hover {
@@ -108,7 +110,11 @@ a.no-underline:focus {
   font-weight: 600;
   font-size: 1.25rem;
   margin-bottom: 0.5rem;
-  color: #212529;
+  color: #ffffff;
+}
+
+.my-badge{
+  font-size: 100%;
 }
 
 .list-group-item {
@@ -487,12 +493,10 @@ form.d-flex input.form-control {
 
 /* Legacy filters (keeping for backward compatibility) */
 #filters {
-  padding: 15px;
   margin-bottom: 15px;
   border-radius: 14px 14px 14px 14px;
   -webkit-border-radius: 14px 14px 14px 14px;
   -moz-border-radius: 14px 14px 14px 14px;
-  background: #404368;
 }
 
 .country-filter-container .form-check,
@@ -746,6 +750,20 @@ input.styled-range::-moz-range-thumb {
   align-items: center;
 }
 
+.bootstrap-select,
+.bootstrap-select>.dropdown-toggle,
+.bootstrap-select>.dropdown-toggle.bs-placeholder,
+.bootstrap-select>.dropdown-toggle.bs-placeholder:active,
+.bootstrap-select>.dropdown-toggle.bs-placeholder:focus,
+.bootstrap-select>.dropdown-toggle.bs-placeholder:hover{
+  background-color: var(--primary-color);
+  color: #ffffff;
+}
+
+.bootstrap-select:not(.input-group-btn), .bootstrap-select[class*=col-]{
+  margin-top: 26px;
+}
+
 .update-button {
   display: flex;
   align-items: center;
@@ -824,3 +842,118 @@ input.styled-range::-moz-range-thumb {
 }
 
 /* END FOOTER */
+
+/* Filter Toggle Styles */
+
+/* Toggle Filters Button */
+.toggle-filters-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.5rem;
+  background: var(--secondary-color);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+  font-size: 0.9rem;
+}
+
+.toggle-filters-button:hover {
+  background: #475569;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.toggle-filters-button.active {
+  background: var(--primary-color);
+}
+
+.toggle-filters-button.active:hover {
+  background: var(--primary-hover);
+}
+
+/* Filter toggle icon rotation */
+.filter-toggle-icon {
+  transition: transform 0.3s ease;
+}
+
+.toggle-filters-button.active .filter-toggle-icon {
+  transform: rotate(180deg);
+}
+
+/* Filters container animation */
+.filters-container {
+  max-width: 1200px;
+  margin: 0 auto 2rem auto;
+  padding: 1.5rem;
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+}
+
+.filters-container.hidden {
+  max-height: 0;
+  padding: 0 1.5rem;
+  margin-bottom: 0;
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.filters-container.visible {
+  max-height: 1000px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Search section with toggle button */
+.search-section {
+  margin-bottom: 0.5rem;
+}
+
+.search-bar {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.search-bar.with-toggle {
+  gap: 0.75rem;
+}
+
+/* Responsive adjustments for toggle button */
+@media (max-width: 768px) {
+  .search-bar.with-toggle {
+    flex-wrap: wrap;
+  }
+  
+  .toggle-filters-button {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .search-bar.with-toggle {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .search-input-wrapper {
+    width: 100%;
+  }
+  
+  .search-button,
+  .toggle-filters-button {
+    width: 100%;
+  }
+  
+  .toggle-filters-button {
+    order: 3;
+  }
+}

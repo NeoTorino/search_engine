@@ -2,7 +2,7 @@
 <div class="col-md-6 col-lg-4 mb-4">
   <a href="{{ job.url }}" class="no-underline" target="_blank" rel="noopener noreferrer">
     <div class="card h-100">
-      <div class="card-header">
+      <div class="card-header d-flex align-items-center justify-content-center h-100 text-white bg-success">
         <h5 class="card-title">{{ job.title }}</h5>
       </div>
 
@@ -28,7 +28,14 @@
 
           {% if job.date_posted %}
             <li class="list-group-item">
-            <b>Date Posted:</b> {{ job.date_posted|format_date }}
+            <b>Date Posted:</b>
+              <span class="my-badge
+                {% if job.date_posted|format_date == 'Today' %} badge bg-danger
+                {% elif job.date_posted|format_date == 'Yesterday' %} badge bg-warning text-dark
+                {% else %} badge bg-light text-dark
+                {% endif %}">
+                {{ job.date_posted|format_date }}
+              </span>
             </li>
           {% endif %}
         </ul>
