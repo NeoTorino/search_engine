@@ -27,7 +27,7 @@ html, body {
   width: 100%;
   height: 100%;
   overflow-x: hidden; /* Prevent unwanted horizontal scrollbars */
-  background-color: #e6e5e5;
+  background-color: var(--background-light);
 }
 
 body {

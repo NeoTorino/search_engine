@@ -72,47 +72,81 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Function to update country counts in the multiselect
+  // Function to update country counts in Bootstrap Select
   function updateCountryCounts(countryCounts) {
-    // Update the global variable so the multiselect can use it
-    window.countryCountsFromFlask = countryCounts;
-    
-    // Regenerate the countries array with new counts
-    if (countryCounts && typeof countryCounts === 'object' && Object.keys(countryCounts).length > 0) {
-      window.countriesFromFlask = Object.entries(countryCounts).map(([label, count]) => ({
-        value: label,
-        label: `${label} (${count})`
-      }));
-    } else {
-      window.countriesFromFlask = [];
-    }
+    const countrySelect = $('#country-select');
+    if (countrySelect.length && countryCounts && Object.keys(countryCounts).length > 0) {
+      
+      // Get currently selected values
+      const selectedValues = countrySelect.val() || [];
+      
+      // Destroy the selectpicker first
+      countrySelect.selectpicker('destroy');
+      
+      // Clear existing options
+      countrySelect.empty();
+      
+      // Add new options with updated counts
+      Object.entries(countryCounts).forEach(([country, count]) => {
+        const option = $('<option></option>')
+          .attr('value', country)
+          .text(`${country} (${count})`);
+        
+        // Maintain selection state
+        if (selectedValues.includes(country)) {
+          option.attr('selected', 'selected');
+        }
+        
+        countrySelect.append(option);
+      });
+      
+      // Reinitialize selectpicker with the same options as before
+      countrySelect.selectpicker({
+        width: '100%',
+        liveSearch: true,
+        actionsBox: true,
+        title: 'All Countries'
+      });
 
-    // If multiselect instance exists, update its options
-    const multiselectContainer = document.getElementById('country-multiselect');
-    if (multiselectContainer && multiselectContainer.multiselectInstance) {
-      multiselectContainer.multiselectInstance.updateOptions(window.countriesFromFlask);
     }
   }
 
-  // Function to update organization counts in the multiselect
+  // Function to update organization counts in Bootstrap Select
   function updateOrganizationCounts(organizationCounts) {
-    // Update the global variable so the multiselect can use it
-    window.organizationCountsFromFlask = organizationCounts;
-    
-    // Regenerate the organizations array with new counts
-    if (organizationCounts && typeof organizationCounts === 'object' && Object.keys(organizationCounts).length > 0) {
-      window.organizationsFromFlask = Object.entries(organizationCounts).map(([label, count]) => ({
-        value: label,
-        label: `${label} (${count})`
-      }));
-    } else {
-      window.organizationsFromFlask = [];
-    }
-
-    // If multiselect instance exists, update its options
-    const multiselectContainer = document.getElementById('organization-multiselect');
-    if (multiselectContainer && multiselectContainer.multiselectInstance) {
-      multiselectContainer.multiselectInstance.updateOptions(window.organizationsFromFlask);
+    const organizationSelect = $('#organization-select');
+    if (organizationSelect.length && organizationCounts && Object.keys(organizationCounts).length > 0) {
+      
+      // Get currently selected values
+      const selectedValues = organizationSelect.val() || [];
+      
+      // Destroy the selectpicker first
+      organizationSelect.selectpicker('destroy');
+      
+      // Clear existing options
+      organizationSelect.empty();
+      
+      // Add new options with updated counts
+      Object.entries(organizationCounts).forEach(([organization, count]) => {
+        const option = $('<option></option>')
+          .attr('value', organization)
+          .text(`${organization} (${count})`);
+        
+        // Maintain selection state
+        if (selectedValues.includes(organization)) {
+          option.attr('selected', 'selected');
+        }
+        
+        organizationSelect.append(option);
+      });
+      
+      // Reinitialize selectpicker with the same options as before
+      organizationSelect.selectpicker({
+        width: '100%',
+        liveSearch: true,
+        actionsBox: true,
+        title: 'All Organizations'
+      });
+      
     }
   }
 
@@ -142,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
       updateLabelAndColor(slider.max);
     }
 
-    // Reset country multiselect
+    // Reset Bootstrap Select dropdowns
     $('#country-select').selectpicker('deselectAll');
     $('#organization-select').selectpicker('deselectAll');
 
@@ -175,17 +209,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       })
       .then(data => {
-        const resultsContainer = document.getElementById('results-container');
-        if (resultsContainer) {
-          resultsContainer.innerHTML = data.html;
-        }
-
-        // Update metadata if it's a JSON response (filter changes)
+        // Update metadata FIRST if it's a JSON response (before replacing HTML)
         if (data.total_results !== undefined) {
           updateResultsCount(data.total_results, data.query);
           updateCountryCounts(data.country_counts || {});
           updateOrganizationCounts(data.organization_counts || {});
           updateLoadMoreButton(data.show_load_more, 12, data.query);
+        }
+
+        // Then update the results container HTML
+        const resultsContainer = document.getElementById('results-container');
+        if (resultsContainer) {
+          resultsContainer.innerHTML = data.html;
         }
       })
       .catch(error => {
@@ -307,21 +342,9 @@ document.addEventListener('DOMContentLoaded', () => {
         updateLabelAndColor(slider.max);
       }
 
-      // Reset country multiselect
-      const countryMultiselect = document.getElementById('country-multiselect');
-      if (countryMultiselect && countryMultiselect.multiselectInstance) {
-        countryMultiselect.multiselectInstance.setSelectedValues([]);
-      }
-
-      // Reset organization multiselect
-      const organizationMultiselect = document.getElementById('organization-multiselect');
-      if (organizationMultiselect && organizationMultiselect.multiselectInstance) {
-        organizationMultiselect.multiselectInstance.setSelectedValues([]);
-      }
-
-      // Legacy checkbox reset (if any exist)
-      const checkboxes = document.querySelectorAll('input[name="country"], input[name="organization"]');
-      checkboxes.forEach(cb => cb.checked = false);
+      // Reset Bootstrap Select dropdowns
+      $('#country-select').selectpicker('deselectAll');
+      $('#organization-select').selectpicker('deselectAll');
 
       // Also update the main search input in the filters form to match
       const mainSearchInput = document.querySelector('input[name="q"]');
@@ -404,17 +427,9 @@ document.addEventListener('DOMContentLoaded', () => {
           updateLabelAndColor(slider.max);
         }
 
-        // Reset country multiselect
-        const countryMultiselect = document.getElementById('country-multiselect');
-        if (countryMultiselect && countryMultiselect.multiselectInstance) {
-          countryMultiselect.multiselectInstance.setSelectedValues([]);
-        }
-
-        // Reset organization multiselect
-        const organizationMultiselect = document.getElementById('organization-multiselect');
-        if (organizationMultiselect && organizationMultiselect.multiselectInstance) {
-          organizationMultiselect.multiselectInstance.setSelectedValues([]);
-        }
+        // Reset Bootstrap Select dropdowns
+        $('#country-select').selectpicker('deselectAll');
+        $('#organization-select').selectpicker('deselectAll');
 
         // Sync search inputs
         const navbarSearchInput = document.getElementById('navbar-search-input');
