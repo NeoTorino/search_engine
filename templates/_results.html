@@ -30,8 +30,8 @@
             <li class="list-group-item">
             <b>Date Posted:</b>
               <span class="my-badge
-                {% if job.date_posted|format_date == 'Today' %} badge bg-danger
-                {% elif job.date_posted|format_date == 'Yesterday' %} badge bg-warning text-dark
+                {% if job.date_posted|format_date == 'Today' %} badge bg-danger text-white
+                {% elif job.date_posted|format_date == 'Yesterday' %} badge bg-info text-white
                 {% else %} badge bg-light text-dark
                 {% endif %}">
                 {{ job.date_posted|format_date }}

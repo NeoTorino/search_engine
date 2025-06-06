@@ -4,8 +4,7 @@ import json
 from flask import Blueprint, render_template, request, jsonify
 from services.utils import sanitize_input, get_date_range_days
 from services.search_service import search_jobs, get_landing_stats
-from services.country_service import get_all_countries
-from services.organization_service import get_all_organizations
+from services.stats_service import get_stats_overview, get_jobs_per_day, get_top_countries, get_word_cloud_data, get_organizations_stats
 
 main = Blueprint('main', __name__)
 
@@ -103,10 +102,61 @@ def contact():
 def organizations():
     return render_template("organizations.html", time=time)
 
+@main.route("/sources")
+def sources():
+    return render_template("sources.html",nonce=g.csp_nonce, time=time)
+
 @main.route("/stats")
 def stats():
     return render_template("stats.html", time=time)
 
-@main.route("/sources")
-def sources():
-    return render_template("sources.html",nonce=g.csp_nonce, time=time)
+# Stats API Routes
+@main.route("/api/stats/overview")
+def stats_overview():
+    """Get overview statistics: total jobs, organizations, average jobs per org"""
+    try:
+        data = get_stats_overview()
+        return jsonify(data)
+    except Exception as e:
+        print(f"Error in stats overview: {e}")
+        return jsonify({"error": "Failed to load overview stats"}), 500
+
+@main.route("/api/stats/jobs-per-day")
+def stats_jobs_per_day():
+    """Get jobs posted per day for the last 30 days"""
+    try:
+        data = get_jobs_per_day()
+        return jsonify(data)
+    except Exception as e:
+        print(f"Error in jobs per day: {e}")
+        return jsonify({"error": "Failed to load jobs per day data"}), 500
+
+@main.route("/api/stats/top-countries")
+def stats_top_countries():
+    """Get top countries by job count"""
+    try:
+        data = get_top_countries()
+        return jsonify(data)
+    except Exception as e:
+        print(f"Error in top countries: {e}")
+        return jsonify({"error": "Failed to load countries data"}), 500
+
+@main.route("/api/stats/word-cloud")
+def stats_word_cloud():
+    """Get word frequency data for job titles"""
+    try:
+        data = get_word_cloud_data()
+        return jsonify(data)
+    except Exception as e:
+        print(f"Error in word cloud: {e}")
+        return jsonify({"error": "Failed to load word cloud data"}), 500
+
+@main.route("/api/stats/organizations")
+def stats_organizations():
+    """Get organizations with job counts and last update dates"""
+    try:
+        data = get_organizations_stats()
+        return jsonify(data)
+    except Exception as e:
+        print(f"Error in organizations stats: {e}")
+        return jsonify({"error": "Failed to load organizations data"}), 500

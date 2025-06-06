@@ -1,11 +1,76 @@
 {% extends "base.html" %}
 
+{% block title %}Statistics - Job Search{% endblock %}
 
-{% block title %}About Us{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/stats.css') }}?v={{ time.time() }}" />
+{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <h1>About This Project</h1>
-    <p>This is a job search app powered by Flask and OpenSearch.</p>
+<div class="stats-container">
+    <div class="container">
+        
+        <!-- Overview Stats Cards -->
+        <div class="row mb-5">
+            <div class="col-md-4">
+                <div class="stats-card text-center">
+                    <div class="stat-number" id="totalJobs">
+                        <div class="loading-spinner"></div>
+                    </div>
+                    <div class="stat-label">Total Jobs</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stats-card text-center">
+                    <div class="stat-number" id="totalOrgs">
+                        <div class="loading-spinner"></div>
+                    </div>
+                    <div class="stat-label">Organizations</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="stats-card text-center">
+                    <div class="stat-number" id="avgJobsPerOrg">
+                        <div class="loading-spinner"></div>
+                    </div>
+                    <div class="stat-label">Avg Jobs/Org</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Charts Row -->
+        <div class="row mb-5">
+            <div class="col-lg-8">
+                <div class="chart-container">
+                    <h3 class="mb-4">Jobs Posted Per Day (Last 30 Days)</h3>
+                    <canvas id="jobsPerDayChart" style="max-height: 400px;"></canvas>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="chart-container">
+                    <h3 class="mb-4">Top Countries</h3>
+                    <canvas id="countriesChart" style="max-height: 400px;"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Word Cloud with improved structure -->
+        <div class="row mb-5">
+            <div class="col-12">
+                <div class="chart-container">
+                    <h3 class="mb-4">Job Keywords Word Cloud</h3>
+                    <div class="word-cloud-container">
+                        <canvas id="canvas" width="800" height="500"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+    <script nonce="{{ nonce }}" src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/stats.js') }}?v={{ time.time() }}"></script>
 {% endblock %}

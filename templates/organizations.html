@@ -1,11 +1,45 @@
 {% extends "base.html" %}
 
+{% block title %}Statistics - Job Search{% endblock %}
 
-{% block title %}About Us{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/stats.css') }}?v={{ time.time() }}" />
+{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <h1>About This Project</h1>
-    <p>This is a job search app powered by Flask and OpenSearch.</p>
+<div class="stats-container">
+    <div class="container">        
+        <!-- Organizations Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="table-container">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="orgsTable">
+                            <thead>
+                                <tr>
+                                    <th scope="col">
+                                        <input type="text" id="searchOrgs" class="form-control" placeholder="Search organizations..." style="width: 250px;">
+                                    </th>
+                                    <th scope="col">Total Jobs</th>
+                                    <th scope="col">Last Updated</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orgsTableBody">
+                                <tr>
+                                    <td colspan="4" class="text-center">
+                                        <div class="loading-spinner"></div> Loading organizations...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+    <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/orgs.js') }}"></script>
 {% endblock %}

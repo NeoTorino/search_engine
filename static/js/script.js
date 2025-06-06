@@ -150,6 +150,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Function to reset load more button to initial state
+  function resetLoadMoreButton() {
+    const loadMoreBtn = document.getElementById('load-more');
+    if (loadMoreBtn) {
+      loadMoreBtn.disabled = false;
+      loadMoreBtn.textContent = 'Load More';
+      loadMoreBtn.dataset.offset = '12';
+      loadMoreBtn.dataset.query = '';
+    }
+  }
+
   // Function to update load more button
   function updateLoadMoreButton(showLoadMore, newOffset, query = '') {
     const loadMoreBtn = document.getElementById('load-more');
@@ -158,6 +169,9 @@ document.addEventListener('DOMContentLoaded', () => {
         loadMoreBtn.style.display = 'block';
         loadMoreBtn.dataset.offset = newOffset || 12;
         loadMoreBtn.dataset.query = query || '';
+        // Reset button state in case it was previously disabled
+        loadMoreBtn.disabled = false;
+        loadMoreBtn.textContent = 'Load More';
       } else {
         loadMoreBtn.style.display = 'none';
       }
@@ -198,6 +212,9 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   window.fetchFilteredResults = function(queryParams) {
+    // Reset load more button before fetching new results
+    resetLoadMoreButton();
+    
     const url = `/search?${queryParams}`;
     fetchWithAjaxHeader(url)
       .then(response => {
