@@ -14,7 +14,7 @@ def is_not_blank(s: str) -> bool:
     return bool(s and not s.isspace())
 
 
-def search_jobs(query, selected_countries=None, selected_organizations=None, date_range=None, offset=0, size=12):
+def search_jobs(query, selected_countries=None, selected_organizations=None, selected_sources=None, date_range=None, offset=0, size=12):
     url = f"{OPENSEARCH_URL}/{INDEX_NAME}/_search"
 
     payload = {
@@ -26,13 +26,16 @@ def search_jobs(query, selected_countries=None, selected_organizations=None, dat
             },
             "organizations": {
                 "terms": {"field": "organization", "size": 100}
+            },
+            "sources": {
+                "terms": {"field": "source", "size": 100}
             }
         }
     }
 
     # Initialize query structure
     has_text_query = query and is_not_blank(query)
-    has_filters = bool(selected_countries or selected_organizations or date_range)
+    has_filters = bool(selected_countries or selected_organizations or selected_sources or date_range)
 
     if has_text_query or has_filters:
         # Build bool query with must and filter clauses
@@ -54,6 +57,8 @@ def search_jobs(query, selected_countries=None, selected_organizations=None, dat
             payload["query"]["bool"]["filter"].append({"terms": {"country": selected_countries}})
         if selected_organizations:
             payload["query"]["bool"]["filter"].append({"terms": {"organization": selected_organizations}})
+        if selected_sources:
+            payload["query"]["bool"]["filter"].append({"terms": {"source": selected_sources}})
         if date_range:
             payload["query"]["bool"]["filter"].append({"range": {"date_posted": date_range}})
 
@@ -64,7 +69,12 @@ def search_jobs(query, selected_countries=None, selected_organizations=None, dat
         # No query and no filters - return everything
         payload["query"] = {"match_all": {}}
 
-    results, total_results, country_counts, organization_counts, show_load_more = [], 0, {}, {}, True
+    results = []
+    total_results = 0
+    country_counts = {}
+    organization_counts = {}
+    source_counts = {}
+    show_load_more = True
 
     try:
         print(json.dumps(payload, indent=4))    # for debugging
@@ -81,6 +91,10 @@ def search_jobs(query, selected_countries=None, selected_organizations=None, dat
             # Get organization counts
             org_buckets = data.get('aggregations', {}).get('organizations', {}).get('buckets', [])
             organization_counts = dict(sorted((b["key"], b["doc_count"]) for b in org_buckets))
+            
+            # Get source counts
+            source_buckets = data.get('aggregations', {}).get('sources', {}).get('buckets', [])
+            source_counts = dict(sorted((b["key"], b["doc_count"]) for b in source_buckets))
             
             show_load_more = (offset + size) < total_results
 
@@ -100,7 +114,7 @@ def search_jobs(query, selected_countries=None, selected_organizations=None, dat
     except Exception as e:
         print("Search error:", str(e))
 
-    return results, total_results, country_counts, organization_counts, show_load_more
+    return results, total_results, country_counts, organization_counts, source_counts, show_load_more
 
 
 def get_landing_stats():

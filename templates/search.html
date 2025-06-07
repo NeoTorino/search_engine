@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Job Search{% if query %} - "{{ query }}"{% endif %}{% endblock %}
+
+{% block head %}
+    {{ super() }}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/search.css') }}?v={{ time.time() }}" />
+{% endblock %}
+
+{% block content %}
+
+        <div class="container py-4">
+        
+            <!-- Filters -->
+            {% include '_filters.html' %}
+
+            <p class="text-muted liner">
+                {% if is_empty_query %}
+                    Showing all {{ "{:,}".format(total_results) }} result{{ total_results != 1 and 's' or '' }}
+                {% else %}
+                    About {{ "{:,}".format(total_results) }} result{{ total_results != 1 and 's' or '' }} for "<strong>{{ query }}</strong>"
+                {% endif %}
+            </p>
+
+            <!-- Results -->
+            {% if results %}
+                <div class="row" id="results-container">{% include '_results.html' %}</div>
+
+                {% if show_load_more %}
+                <div class="text-center mt-4">
+                <button
+                    id="load-more"
+                    class="btn btn-outline-primary"
+                    data-query="{{ query }}"
+                    data-offset="{{ offset + 12 }}"
+                    data-country="{{ selected_countries | join(',') }}"
+                    data-date="{{ selected_date }}"
+                >
+                    Load More
+                </button>
+                </div>
+                {% endif %}
+            {% else %}
+                {% if is_empty_query %}
+                    <p class="text-muted">No results found</p>
+                {% else %}
+                    <p class="text-muted">No results found for "{{ query }}"</p>
+                {% endif %}
+            {% endif %}
+
+        </div>
+
+{% endblock %}
+
+{% block scripts %}
+{% endblock %}

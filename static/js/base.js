@@ -150,6 +150,45 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Function to update source counts in Bootstrap Select
+  function updateSourceCounts(sourceCounts) {
+    const sourceSelect = $('#source-select');
+    if (sourceSelect.length && sourceCounts && Object.keys(sourceCounts).length > 0) {
+      
+      // Get currently selected values
+      const selectedValues = sourceSelect.val() || [];
+      
+      // Destroy the selectpicker first
+      sourceSelect.selectpicker('destroy');
+      
+      // Clear existing options
+      sourceSelect.empty();
+      
+      // Add new options with updated counts
+      Object.entries(sourceCounts).forEach(([source, count]) => {
+        const option = $('<option></option>')
+          .attr('value', source)
+          .text(`${source} (${count})`);
+        
+        // Maintain selection state
+        if (selectedValues.includes(source)) {
+          option.attr('selected', 'selected');
+        }
+        
+        sourceSelect.append(option);
+      });
+      
+      // Reinitialize selectpicker with the same options as before
+      sourceSelect.selectpicker({
+        width: '100%',
+        liveSearch: true,
+        actionsBox: true,
+        title: 'All Sources'
+      });
+      
+    }
+  }
+
   // Function to reset load more button to initial state
   function resetLoadMoreButton() {
     const loadMoreBtn = document.getElementById('load-more');
@@ -193,6 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Reset Bootstrap Select dropdowns
     $('#country-select').selectpicker('deselectAll');
     $('#organization-select').selectpicker('deselectAll');
+    $('#source-select').selectpicker('deselectAll');
 
     // Update currentQuery to keep the search term
     currentQuery = sanitizeInput(currentSearchQuery);
@@ -203,9 +243,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const formData = new FormData(form);
       formData.set('q', currentQuery); // Keep the search query
       formData.set('date_posted_days', '30'); // Reset to default
-      // Remove all country and organization filters
+      // Remove all country, organization, and source filters
       formData.delete('country');
       formData.delete('organization');
+      formData.delete('source');
       const params = new URLSearchParams(formData);
       fetchFilteredResults(params.toString());
     }
@@ -231,6 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
           updateResultsCount(data.total_results, data.query);
           updateCountryCounts(data.country_counts || {});
           updateOrganizationCounts(data.organization_counts || {});
+          updateSourceCounts(data.source_counts || {});
           updateLoadMoreButton(data.show_load_more, 12, data.query);
         }
 
@@ -260,19 +302,15 @@ document.addEventListener('DOMContentLoaded', () => {
       : `Showing jobs posted today${val === 0 ? '' : ` and past ${val} day${val > 1 ? 's' : ''}`}`;
 
       // Update background fill of slider
-      slider.style.background = `linear-gradient(to right, #007bff 0%, #007bff ${percent}%, #dee2e6 ${percent}%, #dee2e6 100%)`;
+      slider.style.background = `linear-gradient(to right, #64748b 0%, #64748b ${percent}%, #dee2e6 ${percent}%, #dee2e6 100%)`;
     }
 
     updateLabelAndColor(slider.value);
 
-    // REMOVED: Real-time slider updates - now only updates the visual label
     slider.addEventListener('input', (e) => {
       updateLabelAndColor(e.target.value);
-      // No longer triggers fetchFilteredResults automatically
     });
     
-    // REMOVED: Real-time slider change event
-    // slider.addEventListener('change', (e) => { ... });
   }
 
   // Handle Load More functionality
@@ -362,6 +400,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Reset Bootstrap Select dropdowns
       $('#country-select').selectpicker('deselectAll');
       $('#organization-select').selectpicker('deselectAll');
+      $('#source-select').selectpicker('deselectAll');  // NEW: Reset source filter
 
       // Also update the main search input in the filters form to match
       const mainSearchInput = document.querySelector('input[name="q"]');
@@ -373,7 +412,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const params = new URLSearchParams();
       params.set('q', currentQuery);
       params.set('date_posted_days', '30'); // Reset to default
-      // Don't add any country or organization parameters (they're reset)
+      // Don't add any country, organization, or source parameters (they're reset)
       
       // Fetch results with clean filters
       fetchFilteredResults(params.toString());

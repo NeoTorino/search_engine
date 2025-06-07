@@ -11,7 +11,7 @@ main = Blueprint('main', __name__)
 @main.route("/", methods=["GET"])
 def index():
     total_jobs, total_orgs = get_landing_stats()
-    return render_template('index.html',
+    return render_template('landing.html',
                             total_jobs=total_jobs,
                             total_orgs=total_orgs,
                             time=time)
@@ -40,14 +40,16 @@ def search_results():
 
     selected_countries = [sanitize_input(c) for c in request.args.getlist('country')]
     selected_organizations = [sanitize_input(o) for o in request.args.getlist('organization')]
+    selected_sources = [sanitize_input(s) for s in request.args.getlist('source')]
 
     print(f"query: '{query}' (empty: {is_empty_query})")
     print(f"date_range: {date_range}")
     print(f"selected_countries: {selected_countries}")
     print(f"selected_organizations: {selected_organizations}")
+    print(f"selected_sources: {selected_sources}")
     
-    results, total_results, country_counts, organization_counts, show_load_more = search_jobs(
-        query, selected_countries, selected_organizations, date_range, offset
+    results, total_results, country_counts, organization_counts, source_counts, show_load_more = search_jobs(
+        query, selected_countries, selected_organizations, selected_sources, date_range, offset
     )
     print(f"total_results: {total_results}")
     print("-" * 40)
@@ -67,6 +69,7 @@ def search_results():
             'total_results': total_results,
             'country_counts': country_counts or {},
             'organization_counts': organization_counts or {},
+            'source_counts': source_counts or {},
             'show_load_more': show_load_more,
             'query': query,
             'is_empty_query': is_empty_query
@@ -75,18 +78,20 @@ def search_results():
 
     # Always show search results page (even for empty queries)
     return render_template(
-        'index.html',
+        'search.html',
         query=query,  # Always pass query variable (even if empty string)
+        is_empty_query=is_empty_query,  # Always pass this flag
         offset=offset,
         results=results,
         total_results=total_results,
         show_load_more=show_load_more,
         country_counts=country_counts or {},
         organization_counts=organization_counts or {},
+        source_counts=source_counts or {},
         selected_countries=selected_countries or [],
         selected_organizations=selected_organizations or [],
+        selected_sources=selected_sources or [],
         date_posted_days=days,
-        is_empty_query=is_empty_query,  # Always pass this flag
         time=time
     )
 

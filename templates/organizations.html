@@ -3,7 +3,8 @@
 {% block title %}Statistics - Job Search{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/stats.css') }}?v={{ time.time() }}" />
+    {{ super() }}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/orgs.css') }}?v={{ time.time() }}" />
 {% endblock %}
 
 {% block content %}
@@ -14,12 +15,15 @@
             <div class="col-12">
                 <div class="table-container">
                     <div class="table-responsive">
+                        <div class="row">
+                            <div class="col-12">
+                                <input type="text" id="searchOrgs" class="form-control" placeholder="Search organizations...">
+                            </div>
+                        </div>
                         <table class="table table-hover mb-0" id="orgsTable">
                             <thead>
                                 <tr>
-                                    <th scope="col">
-                                        <input type="text" id="searchOrgs" class="form-control" placeholder="Search organizations..." style="width: 250px;">
-                                    </th>
+                                    <th scope="col">Organizations</th>
                                     <th scope="col">Total Jobs</th>
                                     <th scope="col">Last Updated</th>
                                 </tr>
@@ -41,5 +45,6 @@
 {% endblock %}
 
 {% block scripts %}
+    {{ super() }}
     <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/orgs.js') }}"></script>
 {% endblock %}

@@ -9,6 +9,30 @@ OPENSEARCH_URL = "https://localhost:9200"
 INDEX_NAME = "jobs"
 AUTH = (os.getenv("USERNAME"), os.getenv("PASSWORD"))
 
+def load_stop_words():
+    """Load stop words from JSON file"""
+    try:
+        # Get the directory where this script is located
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        stop_words_file = os.path.join(current_dir, 'stop_words_english.json')
+        
+        with open(stop_words_file, 'r', encoding='utf-8') as f:
+            stop_words_list = json.load(f)
+            # Convert to set for faster lookup and add some job-specific stop words
+            stop_words = set(stop_words_list + [
+                'job', 'position', 'role', 'opportunity', 'vacancy', '&', '-', '/', '|', '–'
+            ])
+            return stop_words
+    except Exception as e:
+        print(f"Error loading stop words: {e}")
+        # Fallback to basic stop words if file loading fails
+        return {
+            'and', 'or', 'the', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 
+            'of', 'with', 'by', 'from', 'as', 'is', 'are', 'was', 'were',
+            'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will',
+            'job', 'position', 'role', 'opportunity', 'vacancy'
+        }
+
 def get_stats_overview():
     """Get overview statistics: total jobs, organizations, average jobs per org"""
     try:
@@ -174,6 +198,9 @@ def get_top_countries(limit=8):
 def get_word_cloud_data(limit=50):
     """Get word frequency data from job titles"""
     try:
+        # Load stop words from JSON file
+        stop_words = load_stop_words()
+        
         # Get all job titles
         query = {
             "size": 10000,  # Adjust based on your data size
@@ -205,18 +232,6 @@ def get_word_cloud_data(limit=50):
             # Process titles to extract words
             all_words = []
             
-            # Common stop words to exclude
-            stop_words = {
-                'and', 'or', 'the', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 
-                'of', 'with', 'by', 'from', 'as', 'is', 'are', 'was', 'were',
-                'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will',
-                'would', 'could', 'should', 'may', 'might', 'must', 'can', 'shall',
-                'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she', 'it',
-                'we', 'they', 'me', 'him', 'her', 'us', 'them', 'my', 'your',
-                'his', 'her', 'its', 'our', 'their', '&', '-', '/', '|', '–',
-                'job', 'position', 'role', 'opportunity', 'vacancy'
-            }
-            
             for title in titles:
                 # Clean and split the title
                 # Remove special characters and convert to lowercase
@@ -227,7 +242,7 @@ def get_word_cloud_data(limit=50):
                 for word in words:
                     word = word.strip()
                     # Only include words that are 2+ characters and not stop words
-                    if len(word) >= 2 and word not in stop_words and word.isalpha():
+                    if len(word) > 2 and word not in stop_words and word.isalpha():
                         all_words.append(word)
             
             # Count word frequency
@@ -261,7 +276,7 @@ def get_organizations_stats():
                 "organizations": {
                     "terms": {
                         "field": "organization",
-                        "size": 1000,  # Adjust based on your data
+                        "size": 5000,
                         "order": {"job_count": "desc"}
                     },
                     "aggs": {
@@ -271,9 +286,9 @@ def get_organizations_stats():
                         "last_updated": {
                             "max": {"field": "last_update"}
                         },
-                        "country": {
+                        "url_careers": {
                             "terms": {
-                                "field": "country",
+                                "field": "url_careers",
                                 "size": 1
                             }
                         }
@@ -299,16 +314,16 @@ def get_organizations_stats():
                 org_name = bucket["key"]
                 job_count = bucket["job_count"]["value"]
                 last_updated = bucket["last_updated"]["value_as_string"] if bucket["last_updated"]["value"] else None
-                
-                # Get the most common country for this organization
-                country_buckets = bucket.get("country", {}).get("buckets", [])
-                country = country_buckets[0]["key"] if country_buckets else None
+
+                # Extract the first url_careers from the aggregation
+                url_careers_buckets = bucket.get("url_careers", {}).get("buckets", [])
+                url_careers = url_careers_buckets[0]["key"] if url_careers_buckets else None
                 
                 organizations.append({
                     "name": org_name,
                     "job_count": job_count,
                     "last_updated": last_updated,
-                    "country": country
+                    "url_careers": url_careers
                 })
             
             return {"organizations": organizations}

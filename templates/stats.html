@@ -3,7 +3,8 @@
 {% block title %}Statistics - Job Search{% endblock %}
 
 {% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/stats.css') }}?v={{ time.time() }}" />
+    {{ super() }}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/stats.css') }}?v={{ time.time() }}" />
 {% endblock %}
 
 {% block content %}
