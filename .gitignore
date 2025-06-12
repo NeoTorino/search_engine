@@ -5,6 +5,17 @@ logs/
 tests/
 output/
 tmp/
+certs/
+venv/
+
+*.key
+*.priv
+*.private
+*.pass
+*.password
+*.crt
+*.srl
+.env
 
 ################ VSCODE ###############
 #

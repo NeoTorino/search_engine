@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Statistics - Job Search{% endblock %}
+{% block title %}Stats - JobFinder{% endblock %}
 
 {% block head %}
     {{ super() }}
@@ -16,7 +16,7 @@
             <div class="col-md-4">
                 <div class="stats-card text-center">
                     <div class="stat-number" id="totalJobs">
-                        <div class="loading-spinner"></div>
+                        <div clas   s="loading-spinner"></div>
                     </div>
                     <div class="stat-label">Total Jobs</div>
                 </div>
@@ -60,6 +60,9 @@
             <div class="col-12">
                 <div class="chart-container">
                     <h3 class="mb-4">Job Keywords Word Cloud</h3>
+                    <div class="mb-3">
+                        <input type="text" id="wordCloudSearch" class="form-control" placeholder="Search by job title (e.g., Investment Associate)">
+                    </div>
                     <div class="word-cloud-container">
                         <canvas id="canvas" width="800" height="500"></canvas>
                     </div>

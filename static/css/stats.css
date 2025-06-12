@@ -1,8 +1,10 @@
+/* Stats Container */
 .stats-container {
     min-height: 100vh;
     padding: 2rem 0;
 }
 
+/* Stats Cards */
 .stats-card {
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
@@ -22,7 +24,7 @@
 .stat-number {
     font-size: 3rem;
     font-weight: 700;
-    background: linear-gradient(45deg, #667eea, #764ba2);
+    background-color: var(--blue);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -37,6 +39,7 @@
     letter-spacing: 1px;
 }
 
+/* Chart Containers */
 .chart-container {
     background: white;
     border-radius: 15px;
@@ -47,16 +50,62 @@
     overflow: hidden;
 }
 
-/* Word Cloud */
+.chart-container h3 {
+    color: #2d3748;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 2rem;
+    font-size: 1.75rem;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    position: relative;
+    z-index: 3;
+    background-color: var(--blue);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
 
-/* Word Cloud Container Enhancements */
+/* Word Cloud Specific Container */
+.chart-container:has(#canvas),
+.chart-container:has(.html-word-cloud),
+.chart-container:has(.simple-word-list),
+.chart-container:has(.loading-overlay) {
+    background-color: #ffffff;
+    border: 1px solid rgba(102, 126, 234, 0.1);
+    min-height: 630px;
+    box-shadow: 0 15px 40px rgba(102, 126, 234, 0.15);
+}
+
+/* Search Input */
+#wordCloudSearch {
+    max-width: 400px;
+    margin: 0 auto 1.5rem auto;
+    display: block;
+    border: 2px solid #e9ecef;
+    border-radius: 25px;
+    padding: 0.75rem 1.25rem;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+#wordCloudSearch:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    outline: none;
+}
+
+#wordCloudSearch::placeholder {
+    color: #adb5bd;
+    font-style: italic;
+}
+
+/* Word Cloud Container */
 .word-cloud-container {
     position: relative;
     width: 100%;
-    height: 500px;
-    min-height: 500px;
+    min-height: 520px;
     border-radius: 15px;
-    background: linear-gradient(135deg, #f8f9ff 0%, #e8f0ff 50%, #f0f8ff 100%);
+    background-color: #ffffff;
     overflow: hidden;
     box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);
 }
@@ -64,7 +113,7 @@
 /* Canvas Styling */
 #canvas {
     width: 100% !important;
-    height: 500px !important;
+    height: 520px !important;
     max-width: 100%;
     border-radius: 10px;
     background: transparent;
@@ -72,42 +121,19 @@
     z-index: 2;
 }
 
-/* Loading Overlay for Word Cloud */
-.loading-overlay {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 10;
-    background: rgba(255, 255, 255, 0.95);
-    padding: 2rem;
-    border-radius: 15px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    backdrop-filter: blur(10px);
-    text-align: center;
-    min-width: 200px;
-}
-
-.loading-overlay p {
-    margin: 0;
-    color: #666;
-    font-weight: 500;
-}
-
-/* HTML Word Cloud Styling */
+/* HTML Word Cloud */
 .html-word-cloud {
     text-align: center;
     padding: 40px 20px;
     line-height: 2.5;
-    height: 500px;
-    overflow: hidden;
+    min-height: 520px;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: center;
     align-content: center;
     border-radius: 10px;
-    background: linear-gradient(135deg, #f8f9ff 0%, #e8f0ff 50%, #f0f8ff 100%);
+    background-color: var(--blue);
     position: relative;
 }
 
@@ -137,6 +163,7 @@
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     letter-spacing: 0.5px;
     user-select: none;
+    text-decoration: none;
 }
 
 .word-cloud-word:hover {
@@ -147,11 +174,77 @@
     filter: brightness(1.1);
 }
 
+/* Search Context Message */
+.search-context {
+    animation: fadeIn 0.5s ease-in;
+    text-align: center;
+    padding: 0.5rem;
+    background-color: #ffffff;
+    border-radius: 4px;
+}
+
+/* Loading States */
+.loading-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    backdrop-filter: blur(10px);
+    text-align: center;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.loading-overlay p {
+    margin: 1rem 0 0 0;
+    color: #666;
+    font-weight: 500;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(102, 126, 234, 0.2);
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* Message States */
+.no-results-message,
+.error-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 480px;
+    padding: 2rem;
+    text-align: center;
+}
+
+.error-message {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.no-results-message {
+    color: #666;
+}
+
 /* Simple Word List Fallback */
 .simple-word-list {
     padding: 40px 20px;
     text-align: center;
-    height: 500px;
+    min-height: 520px;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -217,93 +310,28 @@
 .word-tag:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-    border-color: rgba(102, 126, 234, 0.4);
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: var(--blue);
+    background-color: var(--blue);
     color: white;
 }
 
-/* Word Cloud specific container */
-.chart-container:has(#canvas),
-.chart-container:has(.html-word-cloud),
-.chart-container:has(.simple-word-list),
-.chart-container:has(.loading-overlay) {
-    background: linear-gradient(135deg, #f8f9ff 0%, #e8f0ff 50%, #f0f8ff 100%);
-    border: 1px solid rgba(102, 126, 234, 0.1);
-    min-height: 580px;
-    box-shadow: 0 15px 40px rgba(102, 126, 234, 0.15);
-    position: relative;
-}
-
-/* Enhanced section title for word cloud */
-.chart-container h3 {
-    color: #2d3748;
-    font-weight: 700;
-    text-align: center;
-    margin-bottom: 2rem;
-    font-size: 1.75rem;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    position: relative;
-    z-index: 3;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-/* Error message styling for word cloud */
-.chart-container .error-message {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 450px;
-    margin: 0;
-    border-radius: 10px;
-    background: linear-gradient(45deg, #ff6b6b, #ee5a52);
-    color: white;
-    font-weight: 600;
-    box-shadow: 0 10px 30px rgba(255, 107, 107, 0.3);
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.9; }
-}
-
-/* Loading spinner */
-.loading-spinner {
-    display: inline-block;
-    width: 40px;
-    height: 40px;
-    border: 4px solid rgba(102, 126, 234, 0.2);
-    border-top: 4px solid #667eea;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
+/* Animations */
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
 
-/* Success state for word cloud */
-.word-cloud-success {
-    border: 2px solid rgba(46, 204, 113, 0.3);
-    background: linear-gradient(135deg, #f8fff9 0%, #f0fff4 100%);
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-/* Responsive enhancements */
+/* Responsive Design */
 @media (max-width: 768px) {
-    .word-cloud-word {
-        margin: 4px 8px;
-        font-size: 0.9rem;
-    }
-    
     .chart-container:has(#canvas),
     .chart-container:has(.html-word-cloud),
     .chart-container:has(.simple-word-list) {
-        min-height: 450px;
+        min-height: 480px;
         padding: 1rem;
     }
     
@@ -311,8 +339,16 @@
     #canvas,
     .html-word-cloud,
     .simple-word-list {
-        height: 350px !important;
-        min-height: 350px;
+        min-height: 400px !important;
+    }
+    
+    #canvas {
+        height: 400px !important;
+    }
+    
+    .word-cloud-word {
+        margin: 4px 8px;
+        font-size: 0.9rem;
     }
     
     .loading-overlay {
@@ -326,8 +362,9 @@
         border-width: 3px;
     }
     
-    .chart-container .error-message {
-        height: 350px;
+    .no-results-message,
+    .error-message {
+        min-height: 350px;
         font-size: 0.9rem;
         padding: 1.5rem;
     }
@@ -342,13 +379,17 @@
         font-size: 1.25rem;
         margin-bottom: 20px;
     }
+    
+    #wordCloudSearch {
+        max-width: 100%;
+    }
 }
 
 @media (max-width: 576px) {
     .chart-container:has(#canvas),
     .chart-container:has(.html-word-cloud),
     .chart-container:has(.simple-word-list) {
-        min-height: 380px;
+        min-height: 420px;
         padding: 0.75rem;
     }
     
@@ -356,12 +397,16 @@
     #canvas,
     .html-word-cloud,
     .simple-word-list {
-        height: 280px !important;
-        min-height: 280px;
+        min-height: 320px !important;
     }
     
-    .chart-container .error-message {
-        height: 280px;
+    #canvas {
+        height: 320px !important;
+    }
+    
+    .no-results-message,
+    .error-message {
+        min-height: 280px;
         padding: 1rem;
         font-size: 0.85rem;
     }
@@ -400,32 +445,5 @@
     
     .loading-overlay p {
         font-size: 0.9rem;
-    }
-}
-
-/* Dark theme support */
-@media (prefers-color-scheme: dark) {
-    .word-cloud-container,
-    .html-word-cloud,
-    .simple-word-list,
-    .chart-container:has(#canvas),
-    .chart-container:has(.html-word-cloud),
-    .chart-container:has(.simple-word-list) {
-        background: linear-gradient(135deg, #1a1d23 0%, #2d3748 50%, #1a202c 100%);
-    }
-    
-    .word-tag {
-        background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
-        border-color: rgba(102, 126, 234, 0.3);
-        color: #e2e8f0;
-    }
-    
-    .loading-overlay {
-        background: rgba(45, 55, 72, 0.95);
-        color: #e2e8f0;
-    }
-    
-    .simple-word-list h4 {
-        color: #e2e8f0;
     }
 }

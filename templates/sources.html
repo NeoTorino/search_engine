@@ -1,11 +1,77 @@
 {% extends "base.html" %}
 
-
-{% block title %}About Us{% endblock %}
+{% block title %}Sources - JobFinder{% endblock %}
 
 {% block content %}
 <div class="container mt-5">
-    <h1>About This Project</h1>
-    <p>This is a job search app powered by Flask and OpenSearch.</p>
+    <div class="card-deck mb-4">
+        <div class="card">
+            <img class="card-img-top logo-img" src="{{ url_for('static', filename='images/workday.png') }}">
+            <div class="card-body">
+            <p class="card-text">
+                <strong>MyWorkdayJobs</strong> is a job application platform used by many organisations
+                through Workday's cloud-based HR system. Each company has its own portal where applicants
+                can search roles, apply, and track status. Though visually similar, each portal is unique
+                and requires separate logins per employer.
+            </p>
+            </div>
+            <div class="card-footer">
+                <small class="text-muted">
+                    <a href="https://www.workday.com/" target="_blank" rel="noreferrer">Link</a>
+                </small>
+            </div>
+        </div>
+        <div class="card">
+            <img class="card-img-top logo-img" src="{{ url_for('static', filename='images/oracle.png') }}">
+            <div class="card-body">
+            <p class="card-text">
+                <strong>Oracle Fusion Cloud HCM</strong> is a comprehensive cloud-based human capital management
+                solution that unifies HR processes across the employee lifecycle. It supports global HR, talent
+                management, payroll, and workforce planning, enabling businesses to improve workforce engagement,
+                streamline HR operations, and adapt to changing organisational needs with built-in AI and
+                analytics tools.</p>
+            </div>
+            <div class="card-footer">
+                <small class="text-muted">
+                    <a href="https://www.oracle.com/human-capital-management/" target="_blank" rel="noreferrer">Link</a>
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-deck mb-4">
+        <div class="card">
+            <img class="card-img-top logo-img" src="{{ url_for('static', filename='images/eightfold.jpg') }}">
+            <div class="card-body">
+            <p class="card-text">
+                <strong>Eightfold.ai</strong> is a cloud-based Talent Intelligence Platform powered by
+                deep-learning AI. It consolidates recruitment, internal mobility, upskilling, and
+                succession planning into a unified system. The platform uses “agentic AI” to continuously
+                match roles, guide career development, reduce bias, and predict workforce needs—all
+                anchored in workers' skills and potential .</p>
+            </div>
+            <div class="card-footer">
+                <small class="text-muted">
+                    <a href="https://eightfold.ai/" target="_blank" rel="noreferrer">Link</a>
+                </small>
+            </div>
+        </div>
+        <div class="card">
+            <img class="card-img-top logo-img" src="{{ url_for('static', filename='images/greenhouse.png') }}">
+            <div class="card-body">
+            <p class="card-text">
+                <strong>Greenhouse</strong> is a cloud-based Applicant Tracking System and hiring platform that
+                helps organisations streamline all stages of recruitment—from sourcing and interviewing to
+                onboarding and analytics. It supports structured hiring, AI-powered tools, DEI reporting, and
+                over 450 integrations. Greenhouse enhances candidate experience, team collaboration, and data-driven
+                hiring decisions.</p>
+            </div>
+            <div class="card-footer">
+                <small class="text-muted">
+                    <a href="https://www.greenhouse.com/" target="_blank" rel="noreferrer">Link</a>
+                </small>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

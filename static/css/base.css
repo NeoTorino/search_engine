@@ -4,6 +4,7 @@
   --primary-hover: #2563eb;
   --secondary-color: #64748b;
   --background-light: #f8fafc;
+  --blue: #000064;
   --border-color: #e2e8f0;
   --text-primary: #1e293b;
   --text-secondary: #64748b;
@@ -15,7 +16,7 @@
   --card-border-radius: 0.375rem;
   --card-shadow: rgba(0, 0, 0, 0.1);
   --font-family: "Lora", serif;
-  --navbar-color: #404368;
+  --navbar-color: #000064;
 
   --yellow1: #cca52e;
   --yellow2: #e0b349;
@@ -178,3 +179,10 @@ form.d-flex input.form-control {
 }
 
 /* END FOOTER */
+
+
+.logo-img {
+    height: 50px;
+    object-fit: contain;
+    width: 100%;
+} 

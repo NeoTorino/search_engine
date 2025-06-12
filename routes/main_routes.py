@@ -1,12 +1,63 @@
 import time
 import json
+from datetime import datetime
+import logging
+import traceback
 
 from flask import Blueprint, render_template, request, jsonify
+
 from services.utils import sanitize_input, get_date_range_days
 from services.search_service import search_jobs, get_landing_stats
 from services.stats_service import get_stats_overview, get_jobs_per_day, get_top_countries, get_word_cloud_data, get_organizations_stats
 
 main = Blueprint('main', __name__)
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s [%(name)s] %(message)s',
+    handlers=[
+        logging.FileHandler('security.log'),
+        logging.StreamHandler()
+    ]
+)
+
+security_logger = logging.getLogger('security')
+
+def log_security_event(event_type, details, request_info=None):
+    """Log security-related events"""
+    if request_info is None:
+        request_info = {
+            'ip': request.remote_addr,
+            'user_agent': request.headers.get('User-Agent', ''),
+            'endpoint': request.endpoint,
+            'method': request.method
+        }
+    
+    security_logger.warning(f"SECURITY EVENT: {event_type} - {details} - {request_info}")
+
+
+@main.app_errorhandler(400)
+def bad_request(error):
+    log_security_event("BAD_REQUEST", str(error))
+    return render_template('errors/400.html', time=time), 400
+
+@main.app_errorhandler(404)
+def page_not_found(error):
+    log_security_event("PAGE_NOT_FOUND", str(error))
+    return render_template('errors/404.html', time=time), 404
+
+@main.app_errorhandler(429)
+def rate_limit_exceeded(error):
+    log_security_event("RATE_LIMIT_EXCEEDED", str(error))
+    return render_template('errors/429.html', time=time), 429
+
+@main.app_errorhandler(500)
+def internal_server_error(error):
+    # Log error but don't expose internal details
+    security_logger.error(f"Internal error: {traceback.format_exc()}")
+    return render_template('errors/500.html', time=time), 500
+
 
 @main.route("/", methods=["GET"])
 def index():
@@ -17,24 +68,55 @@ def index():
                             time=time)
     # Note: NO 'query' variable is passed here
 
+# Health check endpoint (useful for load balancers)
+@main.route('/health')
+def health_check():
+    return {'status': 'healthy', 'timestamp': datetime.utcnow().isoformat()}
 
 @main.route("/search")
+@validate_request_size(max_size=2048)  # Small limit for search
+@limiter.limit("30 per minute")
 def search_results():
+    # Enhanced input validation
     raw_query = request.args.get("q", "")
-    query = sanitize_input(raw_query) if raw_query else ""
     
-    # Check if this is an empty query search request
-    is_empty_query = not query or query.isspace()
-
-    try:
-        offset = int(request.args.get('from', 0))
-    except (ValueError, TypeError):
-        offset = 0
-
+    # Validate query
+    is_valid, clean_query = validate_search_query(raw_query)
+    if not is_valid:
+        log_security_event("INVALID_SEARCH_QUERY", f"Query: {raw_query}")
+        abort(400)
+    
+    # Validate filters
+    selected_countries = validate_filter_values(
+        [sanitize_input(c) for c in request.args.getlist('country')],
+        max_items=10
+    )
+    
+    selected_organizations = validate_filter_values(
+        [sanitize_input(o) for o in request.args.getlist('organization')],
+        max_items=10
+    )
+    
+    selected_sources = validate_filter_values(
+        [sanitize_input(s) for s in request.args.getlist('source')],
+        max_items=5
+    )
+    
+    # Validate date range
     try:
         days = int(request.args.get('date_posted_days', 30))
+        if days < 0 or days > 365:  # Reasonable limits
+            days = 30
     except (ValueError, TypeError):
         days = 30
+    
+    # Validate offset
+    try:
+        offset = int(request.args.get('from', 0))
+        if offset < 0 or offset > 10000:  # Prevent excessive pagination
+            offset = 0
+    except (ValueError, TypeError):
+        offset = 0
 
     date_range = None if days >= 30 else get_date_range_days(days)
 
@@ -99,17 +181,13 @@ def search_results():
 def about():
     return render_template("about.html", time=time)
 
-@main.route("/contact")
-def contact():
-    return render_template("organizations.html",time=time)
-
 @main.route("/organizations")
 def organizations():
     return render_template("organizations.html", time=time)
 
 @main.route("/sources")
 def sources():
-    return render_template("sources.html",nonce=g.csp_nonce, time=time)
+    return render_template("sources.html", time=time)
 
 @main.route("/stats")
 def stats():
@@ -147,10 +225,12 @@ def stats_top_countries():
         return jsonify({"error": "Failed to load countries data"}), 500
 
 @main.route("/api/stats/word-cloud")
+@limiter.limit("10 per minute")
 def stats_word_cloud():
-    """Get word frequency data for job titles"""
+    """Get word frequency data for job titles and descriptions"""
+    search_term = request.args.get("q", "").strip()
     try:
-        data = get_word_cloud_data()
+        data = get_word_cloud_data(search_term=search_term)
         return jsonify(data)
     except Exception as e:
         print(f"Error in word cloud: {e}")

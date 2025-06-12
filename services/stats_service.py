@@ -195,21 +195,30 @@ def get_top_countries(limit=8):
         print(f"Error in get_top_countries: {e}")
         return {"countries": [], "counts": []}
 
-def get_word_cloud_data(limit=50):
-    """Get word frequency data from job titles"""
+def get_word_cloud_data(limit=50, search_term=""):
     try:
-        # Load stop words from JSON file
         stop_words = load_stop_words()
-        
-        # Get all job titles
-        query = {
-            "size": 10000,  # Adjust based on your data size
-            "_source": ["title"],
-            "query": {
-                "match_all": {}
+
+        if search_term:
+            query = {
+                "size": 10000,
+                "_source": ["title", "description"],
+                "query": {
+                    "match": {
+                        "title": {
+                            "query": search_term,
+                            "operator": "and"
+                        }
+                    }
+                }
             }
-        }
-        
+        else:
+            query = {
+                "size": 10000,
+                "_source": ["title", "description"],
+                "query": {"match_all": {}}
+            }
+
         response = requests.get(
             f"{OPENSEARCH_URL}/{INDEX_NAME}/_search",
             auth=AUTH,
@@ -217,53 +226,34 @@ def get_word_cloud_data(limit=50):
             verify=False,
             timeout=30
         )
-        
+
         if response.status_code == 200:
-            data = response.json()
-            hits = data.get("hits", {}).get("hits", [])
+            hits = response.json().get("hits", {}).get("hits", [])
+            texts = [
+                f"{hit['_source'].get('title', '')} {hit['_source'].get('description', '')}"
+                for hit in hits
+            ]
             
-            # Extract titles and process them
-            titles = []
-            for hit in hits:
-                title = hit.get("_source", {}).get("title", "")
-                if title:
-                    titles.append(title)
-            
-            # Process titles to extract words
             all_words = []
-            
-            for title in titles:
-                # Clean and split the title
-                # Remove special characters and convert to lowercase
-                cleaned_title = re.sub(r'[^\w\s]', ' ', title.lower())
-                words = cleaned_title.split()
-                
-                # Filter words
+            for text in texts:
+                cleaned = re.sub(r'[^\w\s]', ' ', text.lower())
+                words = cleaned.split()
                 for word in words:
-                    word = word.strip()
-                    # Only include words that are 2+ characters and not stop words
                     if len(word) > 2 and word not in stop_words and word.isalpha():
                         all_words.append(word)
-            
-            # Count word frequency
+
             word_counts = Counter(all_words)
             most_common = word_counts.most_common(limit)
-            
-            # Format for frontend
-            words_data = []
-            for word, count in most_common:
-                words_data.append({
-                    "text": word.title(),
-                    "count": count
-                })
-            
-            return {"words": words_data}
-        else:
-            print(f"Error response from OpenSearch: {response.status_code} - {response.text}")
-            return {"words": []}
-            
+
+            return {
+                "words": [{"text": word.title(), "count": count} for word, count in most_common]
+            }
+
+        print(f"OpenSearch error: {response.status_code} - {response.text}")
+        return {"words": []}
+
     except Exception as e:
-        print(f"Error in get_word_cloud_data: {e}")
+        print(f"Exception in get_word_cloud_data: {e}")
         return {"words": []}
 
 

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Server Error - JobFinder{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <div class="error-page">
+                <h1 class="display-1 text-muted">500</h1>
+                <h2 class="mb-4">Internal Server Error</h2>
+                <p class="lead mb-4">
+                    Something went wrong on our end. We're working to fix the issue.
+                </p>
+                <p class="mb-4">
+                    Please try refreshing the page or come back in a few minutes. If the problem persists, you can contact us for assistance.
+                </p>
+                
+                <div class="mt-4">
+                    <button onclick="window.location.reload()" class="btn btn-primary btn-lg mr-3">
+                        Try Again
+                    </button>
+                    <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary btn-lg">
+                        Go to Homepage
+                    </a>
+                </div>
+                
+                <div class="mt-4">
+                    <small class="text-muted">
+                        Having trouble? Contact us at 
+                        <a href="mailto:neotorino13@gmail.com">neotorino13@gmail.com</a>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style nonce="{{ nonce }}">
+.error-page {
+    padding: 2rem 0;
+}
+
+.error-page h1 {
+    font-size: 8rem;
+    font-weight: bold;
+    opacity: 0.3;
+}
+
+.error-page h2 {
+    color: #343a40;
+    font-weight: 600;
+}
+
+.error-page .lead {
+    color: #6c757d;
+}
+
+@media (max-width: 768px) {
+    .error-page h1 {
+        font-size: 4rem;
+    }
+    
+    .btn-lg {
+        display: block;
+        width: 100%;
+        margin-bottom: 1rem;
+    }
+    
+    .mr-3 {
+        margin-right: 0 !important;
+    }
+}
+</style>
+{% endblock %}

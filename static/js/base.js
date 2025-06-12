@@ -4,17 +4,92 @@ document.addEventListener('DOMContentLoaded', () => {
 
   $('.selectpicker').selectpicker();
 
-  function sanitizeInput(input) {
-    // Remove script tags or HTML tags
-    return input.replace(/<[^>]*>?/gm, '')  // Strip HTML
-                .replace(/["'`\\]/g, '')    // Remove quotes/backslashes
-                .trim();                   // Trim whitespace
+  function sanitizeInput(input, maxLength = 200, allowSpecialChars = false) {
+    if (!input || typeof input !== 'string') {
+        return '';
+    }
+    
+    // Remove null bytes and control characters
+    input = input.replace(/\x00/g, '');
+    input = input.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+    
+    // Length limiting
+    input = input.substring(0, maxLength);
+    
+    // Remove HTML tags
+    input = input.replace(/<[^>]*>/g, '');
+    
+    // Remove dangerous characters
+    if (!allowSpecialChars) {
+        input = input.replace(/[<>"'`\\;(){}[\]]/g, '');
+    }
+    
+    // Remove script-related content
+    const scriptPatterns = [
+        /javascript:/gi,
+        /vbscript:/gi,
+        /data:/gi,
+        /on\w+\s*=/gi,
+        /script/gi,
+        /iframe/gi,
+        /object/gi,
+        /embed/gi
+    ];
+    
+    scriptPatterns.forEach(pattern => {
+        input = input.replace(pattern, '');
+    });
+    
+    // Normalize whitespace
+    input = input.replace(/\s+/g, ' ').trim();
+    
+    return input;
   }
 
-  function fetchWithAjaxHeader(url, options = {}) {
-    options.headers = options.headers || {};
-    options.headers['X-Requested-With'] = 'XMLHttpRequest';
-    return fetch(url, options);
+  function validateSearchInput(input) {
+    const cleaned = sanitizeInput(input);
+    
+    // Additional validation
+    if (cleaned.length > 200) {
+        return { valid: false, message: "Search query too long", value: "" };
+    }
+    
+    if (cleaned.length < 1) {
+        return { valid: true, message: "", value: cleaned };
+    }
+    
+    // Check for suspicious patterns
+    const suspiciousPatterns = [
+        /union\s+select/i,
+        /drop\s+table/i,
+        /delete\s+from/i,
+        /insert\s+into/i,
+        /exec\s*\(/i
+    ];
+    
+    for (const pattern of suspiciousPatterns) {
+        if (pattern.test(cleaned)) {
+            return { valid: false, message: "Invalid search query", value: "" };
+        }
+    }
+    
+    return { valid: true, message: "", value: cleaned };
+  }
+
+  function getCSRFToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+  }
+
+  function fetchWithSecurity(url, options = {}) {
+      options.headers = options.headers || {};
+      options.headers['X-Requested-With'] = 'XMLHttpRequest';
+      
+      const csrfToken = getCSRFToken();
+      if (csrfToken) {
+          options.headers['X-CSRF-Token'] = csrfToken;
+      }
+      
+      return fetch(url, options);
   }
 
   // Function to toggle filters visibility
@@ -257,7 +332,7 @@ document.addEventListener('DOMContentLoaded', () => {
     resetLoadMoreButton();
     
     const url = `/search?${queryParams}`;
-    fetchWithAjaxHeader(url)
+    fetchWithSecurity(url)
       .then(response => {
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
@@ -336,7 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(formData);
 
     try {
-      const res = await fetchWithAjaxHeader(`/search?${params.toString()}`);
+      const res = await fetchWithSecurity(`/search?${params.toString()}`);
 
       if (res.ok) {
         const html = await res.text();
