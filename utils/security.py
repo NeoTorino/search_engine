@@ -357,7 +357,7 @@ def log_security_event(event_type, details, severity="WARNING", ip_address=None)
 
     security_logger.log(
         logging.ERROR if severity == "ERROR" else logging.WARNING,
-        f"SECURITY_EVENT: {json.dumps(event_data)}"
+        "SECURITY_EVENT: %s", json.dumps(event_data)
     )
 
 def validate_pagination_params(offset, limit, max_limit=100, max_offset=10000):

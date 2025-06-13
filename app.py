@@ -1,13 +1,12 @@
 import os
 import ssl
 import secrets
-import logging
 import threading
 from datetime import datetime, timedelta
 import urllib3
 import redis
 
-from flask import Flask, request, redirect, g, abort
+from flask import Flask, request, redirect, g
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -234,7 +233,7 @@ class ProductionFlaskApp:
 
         @self.app.errorhandler(500)
         def internal_error(error):
-            security_logger.error(f"Internal server error: {error}", exc_info=True)
+            security_logger.error("Internal server error: %s", error, exc_info=True)
             return {"error": "Internal Server Error", "code": 500}, 500
 
     def setup_routes(self):
@@ -307,7 +306,7 @@ class ProductionFlaskApp:
         ssl_port = int(os.getenv('SSL_PORT', '443'))
         http_port = int(os.getenv('HTTP_PORT', '80'))
 
-        security_logger.info(f"Starting production server on {host}:{ssl_port}")
+        security_logger.info("Starting production server on %s:%s", host, ssl_port)
 
         try:
             ssl_context = self.create_ssl_context()
@@ -327,7 +326,7 @@ class ProductionFlaskApp:
             )
 
         except Exception as e:
-            security_logger.error(f"Failed to start production server: {e}")
+            security_logger.error("Failed to start production server: %s", e)
             raise
 
     def start_http_redirect_server(self, host, http_port, ssl_port):
@@ -342,10 +341,10 @@ class ProductionFlaskApp:
 
             try:
                 redirect_server = make_server(host, http_port, redirect_app)
-                security_logger.info(f"HTTP redirect server running on {host}:{http_port}")
+                security_logger.info("HTTP redirect server running on %s:%s", host, http_port)
                 redirect_server.serve_forever()
             except Exception as e:
-                security_logger.error(f"HTTP redirect server failed: {e}")
+                security_logger.error("HTTP redirect server failed: %s", e)
 
         redirect_thread = threading.Thread(target=run_redirect_server, daemon=True)
         redirect_thread.start()

@@ -50,13 +50,13 @@ class SecurityEnforcer:
         )
         self.logger = logging.getLogger('security')
 
-    def get_client_fingerprint(self, request):
+    def get_client_fingerprint(self, req):
         """Create a unique fingerprint for the client"""
         components = [
-            request.headers.get('User-Agent', ''),
-            request.headers.get('Accept-Language', ''),
-            request.headers.get('Accept-Encoding', ''),
-            request.remote_addr or '',
+            req.headers.get('User-Agent', ''),
+            req.headers.get('Accept-Language', ''),
+            req.headers.get('Accept-Encoding', ''),
+            req.remote_addr or '',
         ]
 
         fingerprint_string = '|'.join(components)
@@ -74,7 +74,7 @@ class SecurityEnforcer:
 
         blocked_key = f"blocked_ip:{ip}"
         self.redis_client.setex(blocked_key, duration, "1")
-        self.logger.warning(f"IP {ip} blocked for {duration} seconds")
+        self.logger.warning("IP %s blocked for %s seconds", ip, duration)
 
     def increment_suspicious_activity(self, ip):
         """Track suspicious activity and block if threshold exceeded"""
@@ -87,21 +87,21 @@ class SecurityEnforcer:
             return True
         return False
 
-    def validate_request_integrity(self, request):
+    def validate_request_integrity(self, req):
         """Advanced request validation"""
         # Check for request smuggling attempts
-        if request.headers.get('Transfer-Encoding') and request.headers.get('Content-Length'):
+        if req.headers.get('Transfer-Encoding') and req.headers.get('Content-Length'):
             self.logger.warning("Potential request smuggling attempt")
             return False
 
         # Check for suspicious header combinations
-        if request.headers.get('X-Forwarded-For') and len(request.headers.get('X-Forwarded-For', '').split(',')) > 5:
+        if req.headers.get('X-Forwarded-For') and len(req.headers.get('X-Forwarded-For', '').split(',')) > 5:
             self.logger.warning("Suspicious X-Forwarded-For chain")
             return False
 
         # Validate HTTP method
-        if request.method not in ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS']:
-            self.logger.warning(f"Unusual HTTP method: {request.method}")
+        if req.method not in ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS']:
+            self.logger.warning("Unusual HTTP method: %s", req.method)
             return False
 
         return True
@@ -329,7 +329,6 @@ class DatabaseSecurity:
     def sanitize_sort_field(field):
         """Sanitize sort field names"""
         # Only allow alphanumeric characters, dots, and underscores
-        import re
         if not re.match(r'^[a-zA-Z0-9._]+$', field):
             return None
 

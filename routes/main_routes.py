@@ -13,10 +13,10 @@ from services.stats_service import (
 
 from utils.utils import get_date_range_days
 from utils.security import (
-    sanitize_input, validate_search_query, 
+    sanitize_input, validate_search_query,
     validate_filter_values, validate_request_size
 )
-from utils.monitoring import security_monitor, log_security_event
+from utils.monitoring import log_security_event
 
 main = Blueprint('main', __name__)
 
@@ -254,15 +254,3 @@ def stats_organizations():
         print(f"Error in organizations stats: {e}")
         log_security_event("STATS_ERROR", f"Organizations stats error: {e}")
         return jsonify({"error": "Failed to load organizations data"}), 500
-
-# Security monitoring endpoint (admin only - you should add authentication)
-@main.route("/api/security/stats")
-def security_stats():
-    """Get security monitoring statistics"""
-    # TODO: Add admin authentication here
-    try:
-        sec_stats = security_monitor.get_security_stats()
-        return jsonify(sec_stats)
-    except Exception as e:
-        log_security_event("SECURITY_STATS_ERROR", f"Error: {e}")
-        return jsonify({"error": "Failed to load security stats"}), 500
