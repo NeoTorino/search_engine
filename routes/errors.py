@@ -8,7 +8,7 @@ security_logger = logging.getLogger('security')
 
 def register_error_handlers(app, security_enforcer):
     """Register application-wide error handlers"""
-    
+
     @app.errorhandler(400)
     def bad_request(error):
         log_security_event("BAD_REQUEST", str(error), severity="WARNING")
