@@ -17,7 +17,13 @@ from dotenv import load_dotenv
 from filters.custom_filters import register_filters
 from middleware.secure_headers import apply_secure_headers
 from utils.monitoring import security_monitor
+
 from routes.main_routes import main
+from routes.errors import register_error_handlers
+from routes.utility_routes import utility
+from routes.api_routes import api
+from routes.page_routes import pages
+from routes.search_routes import search
 
 from security_config import (
     SecurityConfig, SecurityEnforcer, create_security_middleware,
@@ -154,7 +160,7 @@ class ProductionFlaskApp:
     def setup_middleware(self):
         """Setup all middleware"""
         # Error handlers
-        self.setup_error_handlers()
+        register_error_handlers(self.app, self.security_enforcer)
 
         # Security headers
         self.app.after_request(apply_secure_headers)
@@ -185,61 +191,16 @@ class ProductionFlaskApp:
                 'scheme': request.scheme
             }
 
-    def setup_error_handlers(self):
-        """Setup comprehensive error handling"""
-
-        @self.app.errorhandler(400)
-        def bad_request(error):
-            log_security_event("BAD_REQUEST", str(error), severity="WARNING")
-            return {"error": "Bad Request", "code": 400}, 400
-
-        @self.app.errorhandler(403)
-        def forbidden(error):
-            log_security_event("FORBIDDEN_ACCESS", str(error), severity="WARNING")
-            return {"error": "Access Forbidden", "code": 403}, 403
-
-        @self.app.errorhandler(404)
-        def not_found(error):
-            path = request.path
-            # Log suspicious 404s
-            suspicious_patterns = [
-                '.php', '.asp', '.jsp', 'wp-admin', 'admin', '.env', 'config',
-                'phpmyadmin', 'xmlrpc', 'wp-login', '.git', 'backup'
-            ]
-
-            if any(pattern in path.lower() for pattern in suspicious_patterns):
-                log_security_event("SUSPICIOUS_404", f"Path: {path}", severity="WARNING")
-                # Increment suspicious activity counter
-                self.security_enforcer.increment_suspicious_activity(request.remote_addr)
-
-            return {"error": "Not Found", "code": 404}, 404
-
-        @self.app.errorhandler(413)
-        def request_too_large(error):
-            log_security_event("REQUEST_TOO_LARGE", f"Size: {request.content_length}", severity="ERROR")
-            return {"error": "Request Too Large", "code": 413}, 413
-
-        @self.app.errorhandler(422)
-        def unprocessable_entity(error):
-            log_security_event("UNPROCESSABLE_ENTITY", str(error), severity="WARNING")
-            return {"error": "Unprocessable Entity", "code": 422}, 422
-
-        @self.app.errorhandler(429)
-        def rate_limit_exceeded(error):
-            log_security_event("RATE_LIMIT_EXCEEDED", f"IP: {request.remote_addr}", severity="ERROR")
-            # Block IP after multiple rate limit violations
-            self.security_enforcer.increment_suspicious_activity(request.remote_addr)
-            return {"error": "Rate Limit Exceeded", "code": 429}, 429
-
-        @self.app.errorhandler(500)
-        def internal_error(error):
-            security_logger.error("Internal server error: %s", error, exc_info=True)
-            return {"error": "Internal Server Error", "code": 500}, 500
-
     def setup_routes(self):
         """Setup application routes"""
         register_filters(self.app)
+
+        # Register blueprints
         self.app.register_blueprint(main)
+        self.app.register_blueprint(pages)
+        self.app.register_blueprint(search)
+        self.app.register_blueprint(utility)
+        self.app.register_blueprint(api)
 
     def validate_production_requirements(self):
         """Validate production environment requirements"""
@@ -350,19 +311,52 @@ class ProductionFlaskApp:
         redirect_thread.start()
 
     def run_development_server(self):
-        """Run development server with security warnings"""
+        """Run development server with optional HTTPS support"""
         host = os.getenv('FLASK_HOST', '127.0.0.1')
-        port = int(os.getenv('HTTP_PORT', '5000'))
+        http_port = int(os.getenv('HTTP_PORT', '5000'))
+        ssl_port = int(os.getenv('SSL_PORT', '5443'))
         debug = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
+        
+        # Check if HTTPS should be enabled in development
+        use_dev_https = os.getenv('DEV_HTTPS', 'False').lower() == 'true'
+        force_https = os.getenv('FORCE_HTTPS', 'False').lower() == 'true'
 
         security_logger.warning("Running in development mode - not suitable for production!")
 
-        self.app.run(
-            host=host,
-            port=port,
-            debug=debug,
-            threaded=True
-        )
+        if use_dev_https:
+            # Try to run HTTPS in development
+            try:
+                ssl_context = self.create_ssl_context()
+                security_logger.info("Starting development HTTPS server on %s:%s", host, ssl_port)
+                
+                # Start HTTP redirect server if FORCE_HTTPS is enabled
+                if force_https:
+                    self.start_http_redirect_server(host, http_port, ssl_port)
+                
+                self.app.run(
+                    host=host,
+                    port=ssl_port,
+                    ssl_context=ssl_context,
+                    debug=debug,
+                    threaded=True
+                )
+            except FileNotFoundError as e:
+                security_logger.error("SSL certificates not found: %s", e)
+                security_logger.info("Please generate certificates or set DEV_HTTPS=False")
+                security_logger.info("To generate certificates: mkdir -p certs/entity && openssl req -x509 -newkey rsa:2048 -keyout certs/entity/entity.key -out certs/entity/entity.crt -days 365 -nodes -subj '/CN=localhost'")
+                raise
+            except Exception as e:
+                security_logger.error("Failed to start HTTPS server: %s", e)
+                raise
+        else:
+            # Run HTTP server
+            security_logger.info("Starting development HTTP server on %s:%s", host, http_port)
+            self.app.run(
+                host=host,
+                port=http_port,
+                debug=debug,
+                threaded=True
+            )
 
 # Initialize application
 def create_app():

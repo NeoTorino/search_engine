@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+
+# Block common admin/sensitive areas
+Disallow: /admin/
+Disallow: /login/
+Disallow: /dashboard/
+Disallow: /api/
+
+# Allow static files
+Allow: /static/
+
+# Sitemap location
+# Sitemap: https://yourdomain.com/sitemap.xml
+
+# Crawl delay in seconds
+# Crawl-delay: 1

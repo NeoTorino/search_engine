@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Request Too Large - JobFinder{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <div class="error-page">
+                <h1 class="display-1 text-muted">413</h1>
+                <h2 class="mb-4">Request Too Large</h2>
+                <p class="lead mb-4">
+                    The file or data you're trying to upload is too large.
+                </p>
+                <p class="mb-4">
+                    Please try uploading a smaller file or reducing the amount of data in your request. 
+                    Our maximum file size limit helps ensure the best experience for all users.
+                </p>
+
+                <div class="mt-4">
+                    <button onclick="window.history.back()" class="btn btn-primary btn-lg mr-3">
+                        Go Back
+                    </button>
+                    <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary btn-lg">
+                        Go to Homepage
+                    </a>
+                </div>
+
+                <div class="mt-4">
+                    <small class="text-muted">
+                        Need help with file size limits? Contact us at 
+                        <a href="mailto:neotorino13@gmail.com">neotorino13@gmail.com</a>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style nonce="{{ nonce }}">
+.error-page {
+    padding: 2rem 0;
+}
+
+.error-page h1 {
+    font-size: 8rem;
+    font-weight: bold;
+    opacity: 0.3;
+}
+
+.error-page h2 {
+    color: #343a40;
+    font-weight: 600;
+}
+
+.error-page .lead {
+    color: #6c757d;
+}
+
+@media (max-width: 768px) {
+    .error-page h1 {
+        font-size: 4rem;
+    }
+
+    .btn-lg {
+        display: block;
+        width: 100%;
+        margin-bottom: 1rem;
+    }
+
+    .mr-3 {
+        margin-right: 0 !important;
+    }
+}
+</style>
+{% endblock %}
