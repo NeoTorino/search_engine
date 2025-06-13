@@ -1,39 +1,88 @@
 {% extends "base.html" %}
 
-
 {% block title %}About Us{% endblock %}
 
 {% block content %}
 <div class="container mt-5">
-    <div class="mb-4">
-        <h1>About This Project</h1>
+    <div class="mb-5">
+
+        <div class="alert alert-info mb-3">
+            <h5>Important Disclaimer</h5>
+            <p><strong>This is not an official company careers page.</strong> This is a personal project that aggregates job listings from various sources. Always visit the company's official careers page to verify job availability and apply directly through their official channels.</p>
+
+            <p>I scan job listings regularly with the aim of indexing all jobs at least once every 24 hours, but I cannot guarantee specific update times. During the scanning process, if any job posting contains incorrect or incomplete information, it is automatically disregarded and will not appear in the search results.</p>
+
+            <p><strong>I take no responsibility for the accuracy of the information</strong> displayed on this site. Job listings are aggregated from various sources and may be outdated, incorrect, or no longer available. Always verify information directly with the company.</p>
+        </div>
+
+        <p>Welcome to my job aggregator — a simple, efficient tool designed to make job hunting faster and easier.</p>
+
+        <p>This app collects job postings from multiple sources and brings them together in one place. You can filter listings by job title, and when you find one that interests you, clicking the result will take you directly to the company's official careers page.</p>
+
     </div>
-    <div class="alert alert-info mb-4">
-        <h5>Important Disclaimer</h5>
-        <p><strong>This is not an official company careers page.</strong> This is a personal project that aggregates job listings from various sources. Always visit the company's official careers page to verify job availability and apply directly through their official channels.</p>
-        
-        <p>I scan job listings regularly with the aim of indexing all jobs at least once every 24 hours, but I cannot guarantee specific update times. During the scanning process, if any job posting contains incorrect or incomplete information, it is automatically disregarded and will not appear in the search results.</p>
+
+    <div class="mb-5">
+        <div class="mb-3">
+            <h2>Why I Built This</h2>
+        </div>
+        <p>I'm an engineer, hacker, and cybersecurity expert — a hacker in the original, noble sense of the word: someone who loves to understand how things work, often by taking them apart and putting them back together. I enjoy building things that solve real problems, and right now, the problem I'm solving is my own.</p>
+
+        <p>I created this app as a personal project while between jobs. Like many others, I found myself spending countless hours navigating different company career pages — only to discover they often use identical job board systems underneath. What frustrated me most was getting search results filled with irrelevant positions that didn't match my criteria, forcing me to waste time fine-tuning filters on each individual site.</p>
+
+        <p>I was tired of navigating to numerous company career sites, each requiring me to apply different filters and keywords just to see relevant results. The inefficiency of repeatedly customising filters across near-identical platforms was maddening. This aggregator solves that problem by doing the heavy lifting for you.</p>
+
+        <p>This project is a blend of curiosity, necessity, and passion — built not for profit, but for purpose.
+
+        <p>I will continue expanding this project by adding support for more companies and job board systems to improve coverage and make the tool even more useful. If there are specific platforms you'd like me to include, feel free to email me — I'd love to hear your suggestions.</p>
+
+        <p>This project is a blend of curiosity, necessity, and passion — built not for profit, but for purpose.</p>
+
     </div>
 
-    <p>Welcome to my job aggregator — a simple, efficient tool designed to make job hunting faster and easier.</p>
+    <div class="mb-5">
+        <div class="mb-3">
+            <h2>Support This Project</h2>
+        </div>
+        <p>
+            I'm not a fan of most job seeker platforms — many are filled with fake listings, cluttered with ads, or skewed to prioritise promoted jobs over genuine opportunities. 
+            This site does none of that. I don't promote jobs, include ads, or inflate the results with roles that don't actually exist.
+        </p>
+        <p>
+            If you find this tool helpful and want to support my work, you can <a href="https://buymeacoffee.com/neotorino" target="_blank">buy me a coffee</a>. 
+            Your support means a lot — it helps keep the site independent, accurate, and ad-free, and motivates me to continue improving it.
+        </p>
 
-    <p>This app collects job postings from multiple sources and brings them together in one place. You can filter listings by job title, and when you find one that interests you, clicking the result will take you directly to the company's official careers page.</p>
+        <a href="https://buymeacoffee.com/neotorino" target="_blank" style="display: inline-block; margin-top: 10px;">
+        <img
+			class="card-img-top logo-img"
+			src="{{ url_for('static', filename='images/buymeacoffee.png') }}"
+			alt="Buy Me A Coffee"
+			style="height: 45px; width: 162px;"
+		>
+        </a>
+    </div>
 
-    </br>
-
-    <h2>Why I Built This</h2>
-    
-    </br>
-
-    <p>I'm an engineer, hacker, and cybersecurity expert — a hacker in the original, noble sense of the word: someone who loves to understand how things work, often by taking them apart and putting them back together. I enjoy building things that solve real problems, and right now, the problem I'm solving is my own.</p>
-
-    <p>I created this app as a personal project while between jobs. Like many others, I found myself spending a lot of time searching across countless sites for opportunities. This tool automates that process — and I hope it can help others, too.</p>
-
-    <p>This project is a blend of curiosity, necessity, and passion — built not for profit, but for purpose.</p>
-
-    <div class="contact">
-        <p>Check out other projects <a href="https://github.com/neotorino" target="_blank">GitHub</a>.</p>
-        <p>Contact: <a href="mailto:neotorino13@gmail.com">neotorino13@gmail.com</a></p>
+    <div class="contact mb-5">
+        <p>
+            <i class="fab fa-github"></i>Check out other projects 
+            <a href="https://github.com/neotorino" target="_blank">GitHub</a>.
+        </p>
+        <p>
+            <i class="fas fa-envelope"></i>
+            Contact: <span id="email"></span>
+        </p>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script nonce="{{ nonce }}" >
+        const user = "neotorino13";
+        const domain = "gmail.com";
+        const email = user + "@" + domain;
+        const link = `<a href="mailto:${email}">${email}</a>`;
+        document.getElementById("email").innerHTML = link;
+    </script>
+
 {% endblock %}

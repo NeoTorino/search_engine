@@ -7,19 +7,19 @@
     min-height: calc(100vh - 75px);
     padding-top: 120px;
     text-align: center;
-    
+
     background-image: url('/static/images/bg_2560x1440.jpg');
     background-size: cover;
     background-position: center center;
     background-repeat: no-repeat;
-    
+
     width: 100vw;
     margin: 0;
     padding-left: 0;
     padding-right: 0;
     box-sizing: border-box;
   }
-  
+
   /* Reserve space for typeit and prevent it from pushing */
   .landing-typeit-container {
     height: 180px;
@@ -27,24 +27,24 @@
     margin-top: 0px;
     width: 100%;
   }
-  
+
   /* TypeIt text styling */
   #typeit-text {
     white-space: pre-line;
     font-size: 1.6rem;
     line-height: 1.4;
   }
-  
+
   .landing-search-form {
     width: 100%;
     max-width: 700px;
     margin: 0 auto;
   }
-  
+
   .landing-search-form .input-group {
     width: 100%;
   }
-  
+
   /* Landing page input and button styles */
   .landing-input {
     border-radius: 12px 0 0 12px !important;
@@ -54,13 +54,13 @@
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
   }
-  
+
   .landing-input:focus {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     background: white;
   }
-  
+
   .landing-btn {
     border-radius: 0 12px 12px 0 !important;
     padding: 1rem 2rem;
@@ -70,52 +70,52 @@
     border: 2px solid var(--primary-color);
     transition: all 0.3s ease;
   }
-  
+
   .landing-btn:hover {
     background: var(--primary-hover);
     border-color: var(--primary-hover);
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
   }
-  
+
   /* Responsive adjustments for landing page */
   @media (max-width: 768px) {
     .landing-wrapper {
       padding-top: 80px;
     }
-    
+
     .landing-typeit-container {
       height: 140px;
     }
-    
+
     #typeit-text {
       font-size: 1.3rem;
     }
-    
+
     .landing-search-form {
       max-width: 90%;
     }
-    
+
     .landing-input,
     .landing-btn {
       font-size: 1rem;
       padding: 0.875rem 1.25rem;
     }
   }
-  
+
   @media (max-width: 576px) {
     .landing-wrapper {
       padding-top: 60px;
     }
-    
+
     .landing-typeit-container {
       height: 120px;
     }
-    
+
     #typeit-text {
       font-size: 1.1rem;
     }
-    
+
     .landing-input,
     .landing-btn {
       font-size: 0.95rem;

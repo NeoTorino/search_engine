@@ -10,7 +10,6 @@
     backdrop-filter: blur(10px);
     border-radius: 20px;
     box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-    padding: 2rem;
     margin-bottom: 2rem;
     border: 1px solid rgba(255, 255, 255, 0.2);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -334,52 +333,52 @@
         min-height: 480px;
         padding: 1rem;
     }
-    
+
     .word-cloud-container,
     #canvas,
     .html-word-cloud,
     .simple-word-list {
         min-height: 400px !important;
     }
-    
+
     #canvas {
         height: 400px !important;
     }
-    
+
     .word-cloud-word {
         margin: 4px 8px;
         font-size: 0.9rem;
     }
-    
+
     .loading-overlay {
         padding: 1.5rem;
         min-width: 180px;
     }
-    
+
     .loading-spinner {
         width: 30px;
         height: 30px;
         border-width: 3px;
     }
-    
+
     .no-results-message,
     .error-message {
         min-height: 350px;
         font-size: 0.9rem;
         padding: 1.5rem;
     }
-    
+
     .word-tag {
         padding: 8px 12px;
         font-size: 12px;
         margin: 4px;
     }
-    
+
     .simple-word-list h4 {
         font-size: 1.25rem;
         margin-bottom: 20px;
     }
-    
+
     #wordCloudSearch {
         max-width: 100%;
     }
@@ -392,57 +391,57 @@
         min-height: 420px;
         padding: 0.75rem;
     }
-    
+
     .word-cloud-container,
     #canvas,
     .html-word-cloud,
     .simple-word-list {
         min-height: 320px !important;
     }
-    
+
     #canvas {
         height: 320px !important;
     }
-    
+
     .no-results-message,
     .error-message {
         min-height: 280px;
         padding: 1rem;
         font-size: 0.85rem;
     }
-    
+
     .chart-container h3 {
         font-size: 1.25rem;
         margin-bottom: 1rem;
     }
-    
+
     .word-cloud-word {
         margin: 3px 5px;
         font-size: 0.8rem;
     }
-    
+
     .loading-spinner {
         width: 25px;
         height: 25px;
         border-width: 2px;
     }
-    
+
     .word-tag {
         padding: 6px 10px;
         font-size: 11px;
         margin: 3px;
     }
-    
+
     .simple-word-list h4 {
         font-size: 1.1rem;
         margin-bottom: 15px;
     }
-    
+
     .loading-overlay {
         padding: 1rem;
         min-width: 150px;
     }
-    
+
     .loading-overlay p {
         font-size: 0.9rem;
     }

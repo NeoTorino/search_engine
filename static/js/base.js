@@ -8,22 +8,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!input || typeof input !== 'string') {
         return '';
     }
-    
+
     // Remove null bytes and control characters
     input = input.replace(/\x00/g, '');
     input = input.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
-    
+
     // Length limiting
     input = input.substring(0, maxLength);
-    
+
     // Remove HTML tags
     input = input.replace(/<[^>]*>/g, '');
-    
+
     // Remove dangerous characters
     if (!allowSpecialChars) {
         input = input.replace(/[<>"'`\\;(){}[\]]/g, '');
     }
-    
+
     // Remove script-related content
     const scriptPatterns = [
         /javascript:/gi,
@@ -35,29 +35,29 @@ document.addEventListener('DOMContentLoaded', () => {
         /object/gi,
         /embed/gi
     ];
-    
+
     scriptPatterns.forEach(pattern => {
         input = input.replace(pattern, '');
     });
-    
+
     // Normalize whitespace
     input = input.replace(/\s+/g, ' ').trim();
-    
+
     return input;
   }
 
   function validateSearchInput(input) {
     const cleaned = sanitizeInput(input);
-    
+
     // Additional validation
     if (cleaned.length > 200) {
         return { valid: false, message: "Search query too long", value: "" };
     }
-    
+
     if (cleaned.length < 1) {
         return { valid: true, message: "", value: cleaned };
     }
-    
+
     // Check for suspicious patterns
     const suspiciousPatterns = [
         /union\s+select/i,
@@ -66,13 +66,13 @@ document.addEventListener('DOMContentLoaded', () => {
         /insert\s+into/i,
         /exec\s*\(/i
     ];
-    
+
     for (const pattern of suspiciousPatterns) {
         if (pattern.test(cleaned)) {
             return { valid: false, message: "Invalid search query", value: "" };
         }
     }
-    
+
     return { valid: true, message: "", value: cleaned };
   }
 
@@ -83,12 +83,12 @@ document.addEventListener('DOMContentLoaded', () => {
   function fetchWithSecurity(url, options = {}) {
       options.headers = options.headers || {};
       options.headers['X-Requested-With'] = 'XMLHttpRequest';
-      
+
       const csrfToken = getCSRFToken();
       if (csrfToken) {
           options.headers['X-CSRF-Token'] = csrfToken;
       }
-      
+
       return fetch(url, options);
   }
 
@@ -97,11 +97,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const filtersContainer = document.getElementById('filters');
     const toggleButton = document.getElementById('toggle-filters');
     const toggleText = document.getElementById('toggle-filters-text');
-    
+
     if (!filtersContainer || !toggleButton || !toggleText) return;
-    
+
     filtersVisible = !filtersVisible;
-    
+
     if (filtersVisible) {
       // Show filters
       filtersContainer.classList.remove('hidden');
@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function initializeFiltersState() {
     const filtersContainer = document.getElementById('filters');
     const toggleButton = document.getElementById('toggle-filters');
-    
+
     if (filtersContainer && toggleButton) {
       // On page load, filters should be hidden
       filtersContainer.classList.add('hidden');
@@ -137,7 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (resultsCountElement) {
       const formattedCount = totalResults.toLocaleString();
       const plural = totalResults !== 1 ? 's' : '';
-      
+
       // Handle empty query display
       if (!query || query.trim() === '') {
         resultsCountElement.innerHTML = `About ${formattedCount} result${plural} (showing all jobs)`;
@@ -151,30 +151,30 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateCountryCounts(countryCounts) {
     const countrySelect = $('#country-select');
     if (countrySelect.length && countryCounts && Object.keys(countryCounts).length > 0) {
-      
+
       // Get currently selected values
       const selectedValues = countrySelect.val() || [];
-      
+
       // Destroy the selectpicker first
       countrySelect.selectpicker('destroy');
-      
+
       // Clear existing options
       countrySelect.empty();
-      
+
       // Add new options with updated counts
       Object.entries(countryCounts).forEach(([country, count]) => {
         const option = $('<option></option>')
           .attr('value', country)
           .text(`${country} (${count})`);
-        
+
         // Maintain selection state
         if (selectedValues.includes(country)) {
           option.attr('selected', 'selected');
         }
-        
+
         countrySelect.append(option);
       });
-      
+
       // Reinitialize selectpicker with the same options as before
       countrySelect.selectpicker({
         width: '100%',
@@ -190,30 +190,30 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateOrganizationCounts(organizationCounts) {
     const organizationSelect = $('#organization-select');
     if (organizationSelect.length && organizationCounts && Object.keys(organizationCounts).length > 0) {
-      
+
       // Get currently selected values
       const selectedValues = organizationSelect.val() || [];
-      
+
       // Destroy the selectpicker first
       organizationSelect.selectpicker('destroy');
-      
+
       // Clear existing options
       organizationSelect.empty();
-      
+
       // Add new options with updated counts
       Object.entries(organizationCounts).forEach(([organization, count]) => {
         const option = $('<option></option>')
           .attr('value', organization)
           .text(`${organization} (${count})`);
-        
+
         // Maintain selection state
         if (selectedValues.includes(organization)) {
           option.attr('selected', 'selected');
         }
-        
+
         organizationSelect.append(option);
       });
-      
+
       // Reinitialize selectpicker with the same options as before
       organizationSelect.selectpicker({
         width: '100%',
@@ -221,7 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
         actionsBox: true,
         title: 'All Organizations'
       });
-      
+
     }
   }
 
@@ -229,30 +229,30 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateSourceCounts(sourceCounts) {
     const sourceSelect = $('#source-select');
     if (sourceSelect.length && sourceCounts && Object.keys(sourceCounts).length > 0) {
-      
+
       // Get currently selected values
       const selectedValues = sourceSelect.val() || [];
-      
+
       // Destroy the selectpicker first
       sourceSelect.selectpicker('destroy');
-      
+
       // Clear existing options
       sourceSelect.empty();
-      
+
       // Add new options with updated counts
       Object.entries(sourceCounts).forEach(([source, count]) => {
         const option = $('<option></option>')
           .attr('value', source)
           .text(`${source} (${count})`);
-        
+
         // Maintain selection state
         if (selectedValues.includes(source)) {
           option.attr('selected', 'selected');
         }
-        
+
         sourceSelect.append(option);
       });
-      
+
       // Reinitialize selectpicker with the same options as before
       sourceSelect.selectpicker({
         width: '100%',
@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
         actionsBox: true,
         title: 'All Sources'
       });
-      
+
     }
   }
 
@@ -297,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Keep the current search query
     const queryInput = document.querySelector('input[name="q"]');
     const currentSearchQuery = queryInput ? queryInput.value : '';
-    
+
     // Reset date slider
     if (slider) {
       slider.value = slider.max;
@@ -311,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Update currentQuery to keep the search term
     currentQuery = sanitizeInput(currentSearchQuery);
-    
+
     // Get the form and create parameters with current query but reset filters
     const form = document.getElementById('filters-form') || document.querySelector('form');
     if (form) {
@@ -330,7 +330,7 @@ document.addEventListener('DOMContentLoaded', () => {
   window.fetchFilteredResults = function(queryParams) {
     // Reset load more button before fetching new results
     resetLoadMoreButton();
-    
+
     const url = `/search?${queryParams}`;
     fetchWithSecurity(url)
       .then(response => {
@@ -385,7 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
     slider.addEventListener('input', (e) => {
       updateLabelAndColor(e.target.value);
     });
-    
+
   }
 
   // Handle Load More functionality
@@ -400,10 +400,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Use the same method as filter functions to get all form data
     const form = document.getElementById('filters-form');
     const formData = new FormData(form);
-    
+
     // Override the offset for load more
     formData.set('from', offset);
-    
+
     // Ensure the query is set (can be empty)
     const sanitizedQuery = sanitizeInput(query);
     formData.set('q', sanitizedQuery);
@@ -458,11 +458,11 @@ document.addEventListener('DOMContentLoaded', () => {
   if (navbarForm) {
     navbarForm.addEventListener('submit', (e) => {
       e.preventDefault(); // Prevent default form submission
-      
+
       const input = document.getElementById('navbar-search-input');
       const rawQuery = input.value.trim();
       const query = sanitizeInput(rawQuery);
-      
+
       // Set currentQuery
       currentQuery = query;
 
@@ -488,7 +488,7 @@ document.addEventListener('DOMContentLoaded', () => {
       params.set('q', currentQuery);
       params.set('date_posted_days', '30'); // Reset to default
       // Don't add any country, organization, or source parameters (they're reset)
-      
+
       // Fetch results with clean filters
       fetchFilteredResults(params.toString());
     });
@@ -508,7 +508,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (updateButton) {
     updateButton.addEventListener('click', function(e) {
       e.preventDefault();
-      
+
       // Get current search query
       const queryInput = document.querySelector('input[name="q"]');
       const rawQuery = queryInput ? queryInput.value.trim() : '';
@@ -540,11 +540,11 @@ document.addEventListener('DOMContentLoaded', () => {
   if (filtersForm) {
     filtersForm.addEventListener('submit', function(e) {
       e.preventDefault(); // Prevent default form submission
-      
+
       // Check if this is a search submission (search button clicked)
       const searchButton = document.getElementById('search-btn');
       const activeElement = document.activeElement;
-      
+
       if (activeElement === searchButton || e.submitter === searchButton) {
         // This is a search - reset all filters
         const queryInput = document.querySelector('input[name="q"]');

@@ -5,24 +5,24 @@ def extract_selectors_from_css(css_content):
     # Match .class or #id selectors only (avoid tag selectors or pseudo classes)
     class_pattern = re.compile(r'\.([a-zA-Z0-9_-]+)')
     id_pattern = re.compile(r'#([a-zA-Z0-9_-]+)')
-    
+
     classes = set(class_pattern.findall(css_content))
     ids = set(id_pattern.findall(css_content))
-    
+
     return classes, ids
 
 def extract_used_classes_and_ids_from_html(html_content):
     class_pattern = re.compile(r'class\s*=\s*["\']([^"\']+)["\']')
     id_pattern = re.compile(r'id\s*=\s*["\']([^"\']+)["\']')
-    
+
     used_classes = set()
     used_ids = set()
-    
+
     for match in class_pattern.findall(html_content):
         used_classes.update(match.split())  # multiple classes in one attribute
 
     used_ids.update(id_pattern.findall(html_content))
-    
+
     return used_classes, used_ids
 
 def find_unused_css_selectors(html_dir, css_dir):

@@ -46,5 +46,5 @@
 
 {% block scripts %}
     {{ super() }}
-    <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/orgs.js') }}"></script>
+    <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/orgs.js') }}?v={{ time.time() }}"></script>
 {% endblock %}

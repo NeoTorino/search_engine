@@ -18,6 +18,5 @@ def format_date(date_str):
     except Exception:
         return escape(date_str)
 
-
 def register_filters(app):
     app.jinja_env.filters['format_date'] = format_date

@@ -15,7 +15,7 @@ def load_stop_words():
         # Get the directory where this script is located
         current_dir = os.path.dirname(os.path.abspath(__file__))
         stop_words_file = os.path.join(current_dir, 'stop_words_english.json')
-        
+
         with open(stop_words_file, 'r', encoding='utf-8') as f:
             stop_words_list = json.load(f)
             # Convert to set for faster lookup and add some job-specific stop words
@@ -43,11 +43,11 @@ def get_stats_overview():
             verify=False,
             timeout=10
         )
-        
+
         total_jobs = 0
         if total_jobs_response.status_code == 200:
             total_jobs = total_jobs_response.json().get("count", 0)
-        
+
         # Get unique organization count
         org_query = {
             "size": 0,
@@ -57,7 +57,7 @@ def get_stats_overview():
                 }
             }
         }
-        
+
         org_response = requests.get(
             f"{OPENSEARCH_URL}/{INDEX_NAME}/_search",
             auth=AUTH,
@@ -65,19 +65,19 @@ def get_stats_overview():
             verify=False,
             timeout=10
         )
-        
+
         total_organizations = 0
         if org_response.status_code == 200:
             total_organizations = org_response.json().get("aggregations", {}).get("unique_organizations", {}).get("value", 0)
-        
+
         avg_jobs_per_org = total_jobs / total_organizations if total_organizations > 0 else 0
-        
+
         return {
             "total_jobs": total_jobs,
             "total_organizations": total_organizations,
             "avg_jobs_per_org": avg_jobs_per_org
         }
-        
+
     except Exception as e:
         print(f"Error in get_stats_overview: {e}")
         return {
@@ -92,7 +92,7 @@ def get_jobs_per_day(days=30):
         # Calculate date range
         end_date = datetime.utcnow().replace(hour=23, minute=59, second=59, microsecond=999999)
         start_date = end_date - timedelta(days=days-1)
-        
+
         query = {
             "size": 0,
             "query": {
@@ -114,7 +114,7 @@ def get_jobs_per_day(days=30):
                 }
             }
         }
-        
+
         response = requests.get(
             f"{OPENSEARCH_URL}/{INDEX_NAME}/_search",
             auth=AUTH,
@@ -122,20 +122,20 @@ def get_jobs_per_day(days=30):
             verify=False,
             timeout=10
         )
-        
+
         if response.status_code == 200:
             data = response.json()
             buckets = data.get("aggregations", {}).get("jobs_per_day", {}).get("buckets", [])
-            
+
             dates = []
             counts = []
-            
+
             for bucket in buckets:
                 date_str = bucket["key_as_string"]
                 count = bucket["doc_count"]
                 dates.append(datetime.strptime(date_str, "%Y-%m-%d").strftime("%m/%d"))
                 counts.append(count)
-            
+
             return {
                 "dates": dates,
                 "counts": counts
@@ -143,7 +143,7 @@ def get_jobs_per_day(days=30):
         else:
             print(f"Error response from OpenSearch: {response.status_code} - {response.text}")
             return {"dates": [], "counts": []}
-            
+
     except Exception as e:
         print(f"Error in get_jobs_per_day: {e}")
         return {"dates": [], "counts": []}
@@ -163,7 +163,7 @@ def get_top_countries(limit=8):
                 }
             }
         }
-        
+
         response = requests.get(
             f"{OPENSEARCH_URL}/{INDEX_NAME}/_search",
             auth=AUTH,
@@ -171,18 +171,18 @@ def get_top_countries(limit=8):
             verify=False,
             timeout=10
         )
-        
+
         if response.status_code == 200:
             data = response.json()
             buckets = data.get("aggregations", {}).get("top_countries", {}).get("buckets", [])
-            
+
             countries = []
             counts = []
-            
+
             for bucket in buckets:
                 countries.append(bucket["key"].title())
                 counts.append(bucket["doc_count"])
-            
+
             return {
                 "countries": countries,
                 "counts": counts
@@ -190,7 +190,7 @@ def get_top_countries(limit=8):
         else:
             print(f"Error response from OpenSearch: {response.status_code} - {response.text}")
             return {"countries": [], "counts": []}
-            
+
     except Exception as e:
         print(f"Error in get_top_countries: {e}")
         return {"countries": [], "counts": []}
@@ -233,7 +233,7 @@ def get_word_cloud_data(limit=50, search_term=""):
                 f"{hit['_source'].get('title', '')} {hit['_source'].get('description', '')}"
                 for hit in hits
             ]
-            
+
             all_words = []
             for text in texts:
                 cleaned = re.sub(r'[^\w\s]', ' ', text.lower())
@@ -255,7 +255,6 @@ def get_word_cloud_data(limit=50, search_term=""):
     except Exception as e:
         print(f"Exception in get_word_cloud_data: {e}")
         return {"words": []}
-
 
 def get_organizations_stats():
     """Get organizations with job counts and last update dates"""
@@ -286,7 +285,7 @@ def get_organizations_stats():
                 }
             }
         }
-        
+
         response = requests.get(
             f"{OPENSEARCH_URL}/{INDEX_NAME}/_search",
             auth=AUTH,
@@ -294,11 +293,11 @@ def get_organizations_stats():
             verify=False,
             timeout=30
         )
-        
+
         if response.status_code == 200:
             data = response.json()
             buckets = data.get("aggregations", {}).get("organizations", {}).get("buckets", [])
-            
+
             organizations = []
             for bucket in buckets:
                 org_name = bucket["key"]
@@ -308,19 +307,19 @@ def get_organizations_stats():
                 # Extract the first url_careers from the aggregation
                 url_careers_buckets = bucket.get("url_careers", {}).get("buckets", [])
                 url_careers = url_careers_buckets[0]["key"] if url_careers_buckets else None
-                
+
                 organizations.append({
                     "name": org_name,
                     "job_count": job_count,
                     "last_updated": last_updated,
                     "url_careers": url_careers
                 })
-            
+
             return {"organizations": organizations}
         else:
             print(f"Error response from OpenSearch: {response.status_code} - {response.text}")
             return {"organizations": []}
-            
+
     except Exception as e:
         print(f"Error in get_organizations_stats: {e}")
         return {"organizations": []}

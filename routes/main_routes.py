@@ -1,14 +1,22 @@
 import time
-import json
 from datetime import datetime
 import logging
 import traceback
 
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, abort
 
-from services.utils import sanitize_input, get_date_range_days
 from services.search_service import search_jobs, get_landing_stats
-from services.stats_service import get_stats_overview, get_jobs_per_day, get_top_countries, get_word_cloud_data, get_organizations_stats
+from services.stats_service import (
+    get_stats_overview, get_jobs_per_day,
+    get_top_countries, get_word_cloud_data, get_organizations_stats
+)
+
+from utils.utils import get_date_range_days
+from utils.security import (
+    sanitize_input, validate_search_query, 
+    validate_filter_values, validate_request_size
+)
+from utils.monitoring import security_monitor, log_security_event
 
 main = Blueprint('main', __name__)
 
@@ -17,25 +25,12 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s %(levelname)s [%(name)s] %(message)s',
     handlers=[
-        logging.FileHandler('security.log'),
+        logging.FileHandler('logs/security.log'),
         logging.StreamHandler()
     ]
 )
 
 security_logger = logging.getLogger('security')
-
-def log_security_event(event_type, details, request_info=None):
-    """Log security-related events"""
-    if request_info is None:
-        request_info = {
-            'ip': request.remote_addr,
-            'user_agent': request.headers.get('User-Agent', ''),
-            'endpoint': request.endpoint,
-            'method': request.method
-        }
-    
-    security_logger.warning(f"SECURITY EVENT: {event_type} - {details} - {request_info}")
-
 
 @main.app_errorhandler(400)
 def bad_request(error):
@@ -47,17 +42,21 @@ def page_not_found(error):
     log_security_event("PAGE_NOT_FOUND", str(error))
     return render_template('errors/404.html', time=time), 404
 
+@main.app_errorhandler(413)
+def request_entity_too_large(error):
+    log_security_event("REQUEST_TOO_LARGE", str(error), severity="ERROR")
+    return render_template('errors/413.html', time=time), 413
+
 @main.app_errorhandler(429)
 def rate_limit_exceeded(error):
-    log_security_event("RATE_LIMIT_EXCEEDED", str(error))
+    log_security_event("RATE_LIMIT_EXCEEDED", str(error), severity="ERROR")
     return render_template('errors/429.html', time=time), 429
 
 @main.app_errorhandler(500)
 def internal_server_error(error):
     # Log error but don't expose internal details
-    security_logger.error(f"Internal error: {traceback.format_exc()}")
+    security_logger.error("Internal error: %s", traceback.format_exc())
     return render_template('errors/500.html', time=time), 500
-
 
 @main.route("/", methods=["GET"])
 def index():
@@ -66,7 +65,6 @@ def index():
                             total_jobs=total_jobs,
                             total_orgs=total_orgs,
                             time=time)
-    # Note: NO 'query' variable is passed here
 
 # Health check endpoint (useful for load balancers)
 @main.route('/health')
@@ -75,33 +73,35 @@ def health_check():
 
 @main.route("/search")
 @validate_request_size(max_size=2048)  # Small limit for search
-@limiter.limit("30 per minute")
 def search_results():
     # Enhanced input validation
     raw_query = request.args.get("q", "")
-    
+
     # Validate query
     is_valid, clean_query = validate_search_query(raw_query)
     if not is_valid:
         log_security_event("INVALID_SEARCH_QUERY", f"Query: {raw_query}")
         abort(400)
-    
+
+    query = clean_query
+    is_empty_query = not bool(query.strip())
+
     # Validate filters
     selected_countries = validate_filter_values(
         [sanitize_input(c) for c in request.args.getlist('country')],
         max_items=10
     )
-    
+
     selected_organizations = validate_filter_values(
         [sanitize_input(o) for o in request.args.getlist('organization')],
         max_items=10
     )
-    
+
     selected_sources = validate_filter_values(
         [sanitize_input(s) for s in request.args.getlist('source')],
         max_items=5
     )
-    
+
     # Validate date range
     try:
         days = int(request.args.get('date_posted_days', 30))
@@ -109,7 +109,7 @@ def search_results():
             days = 30
     except (ValueError, TypeError):
         days = 30
-    
+
     # Validate offset
     try:
         offset = int(request.args.get('from', 0))
@@ -120,16 +120,12 @@ def search_results():
 
     date_range = None if days >= 30 else get_date_range_days(days)
 
-    selected_countries = [sanitize_input(c) for c in request.args.getlist('country')]
-    selected_organizations = [sanitize_input(o) for o in request.args.getlist('organization')]
-    selected_sources = [sanitize_input(s) for s in request.args.getlist('source')]
-
     print(f"query: '{query}' (empty: {is_empty_query})")
     print(f"date_range: {date_range}")
     print(f"selected_countries: {selected_countries}")
     print(f"selected_organizations: {selected_organizations}")
     print(f"selected_sources: {selected_sources}")
-    
+
     results, total_results, country_counts, organization_counts, source_counts, show_load_more = search_jobs(
         query, selected_countries, selected_organizations, selected_sources, date_range, offset
     )
@@ -202,6 +198,7 @@ def stats_overview():
         return jsonify(data)
     except Exception as e:
         print(f"Error in stats overview: {e}")
+        log_security_event("STATS_ERROR", f"Overview stats error: {e}")
         return jsonify({"error": "Failed to load overview stats"}), 500
 
 @main.route("/api/stats/jobs-per-day")
@@ -212,6 +209,7 @@ def stats_jobs_per_day():
         return jsonify(data)
     except Exception as e:
         print(f"Error in jobs per day: {e}")
+        log_security_event("STATS_ERROR", f"Jobs per day error: {e}")
         return jsonify({"error": "Failed to load jobs per day data"}), 500
 
 @main.route("/api/stats/top-countries")
@@ -222,18 +220,28 @@ def stats_top_countries():
         return jsonify(data)
     except Exception as e:
         print(f"Error in top countries: {e}")
+        log_security_event("STATS_ERROR", f"Top countries error: {e}")
         return jsonify({"error": "Failed to load countries data"}), 500
 
 @main.route("/api/stats/word-cloud")
-@limiter.limit("10 per minute")
 def stats_word_cloud():
     """Get word frequency data for job titles and descriptions"""
     search_term = request.args.get("q", "").strip()
+
+    # Validate search term
+    if search_term:
+        is_valid, clean_search_term = validate_search_query(search_term)
+        if not is_valid:
+            log_security_event("INVALID_WORDCLOUD_QUERY", f"Query: {search_term}")
+            return jsonify({"error": "Invalid search term"}), 400
+        search_term = clean_search_term
+
     try:
         data = get_word_cloud_data(search_term=search_term)
         return jsonify(data)
     except Exception as e:
         print(f"Error in word cloud: {e}")
+        log_security_event("STATS_ERROR", f"Word cloud error: {e}")
         return jsonify({"error": "Failed to load word cloud data"}), 500
 
 @main.route("/api/stats/organizations")
@@ -244,4 +252,17 @@ def stats_organizations():
         return jsonify(data)
     except Exception as e:
         print(f"Error in organizations stats: {e}")
+        log_security_event("STATS_ERROR", f"Organizations stats error: {e}")
         return jsonify({"error": "Failed to load organizations data"}), 500
+
+# Security monitoring endpoint (admin only - you should add authentication)
+@main.route("/api/security/stats")
+def security_stats():
+    """Get security monitoring statistics"""
+    # TODO: Add admin authentication here
+    try:
+        sec_stats = security_monitor.get_security_stats()
+        return jsonify(sec_stats)
+    except Exception as e:
+        log_security_event("SECURITY_STATS_ERROR", f"Error: {e}")
+        return jsonify({"error": "Failed to load security stats"}), 500

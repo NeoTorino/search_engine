@@ -1,18 +1,15 @@
 import os
 import json
-from datetime import datetime, timedelta
 from markupsafe import escape
 import requests
-from services.utils import fix_encoding, truncate_description
+from utils.utils import fix_encoding, truncate_description
 
 OPENSEARCH_URL = "https://localhost:9200"
 INDEX_NAME = "jobs"
 AUTH = (os.getenv("USERNAME"), os.getenv("PASSWORD"))
 
-
 def is_not_blank(s: str) -> bool:
     return bool(s and not s.isspace())
-
 
 def search_jobs(query, selected_countries=None, selected_organizations=None, selected_sources=None, date_range=None, offset=0, size=12):
     url = f"{OPENSEARCH_URL}/{INDEX_NAME}/_search"
@@ -83,19 +80,19 @@ def search_jobs(query, selected_countries=None, selected_organizations=None, sel
             data = res.json()
             hits = data.get('hits', {}).get('hits', [])
             total_results = data.get('hits', {}).get('total', {}).get('value', 0)
-            
+
             # Get country counts
             country_buckets = data.get('aggregations', {}).get('countries', {}).get('buckets', [])
             country_counts = dict(sorted((b["key"], b["doc_count"]) for b in country_buckets))
-            
+
             # Get organization counts
             org_buckets = data.get('aggregations', {}).get('organizations', {}).get('buckets', [])
             organization_counts = dict(sorted((b["key"], b["doc_count"]) for b in org_buckets))
-            
+
             # Get source counts
             source_buckets = data.get('aggregations', {}).get('sources', {}).get('buckets', [])
             source_counts = dict(sorted((b["key"], b["doc_count"]) for b in source_buckets))
-            
+
             show_load_more = (offset + size) < total_results
 
             for hit in hits:
@@ -115,7 +112,6 @@ def search_jobs(query, selected_countries=None, selected_organizations=None, sel
         print("Search error:", str(e))
 
     return results, total_results, country_counts, organization_counts, source_counts, show_load_more
-
 
 def get_landing_stats():
     stats = {"jobs": 0, "orgs": 0}

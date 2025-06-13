@@ -20,20 +20,20 @@ function showError(elementId) {
 function setupWordCloudSearch() {
     const searchInput = document.getElementById('wordCloudSearch');
     if (!searchInput) return;
-    
+
     searchInput.addEventListener('input', function() {
         // Clear previous timeout
         if (wordCloudSearchTimeout) {
             clearTimeout(wordCloudSearchTimeout);
         }
-        
+
         // Debounce the search - wait 500ms after user stops typing
         wordCloudSearchTimeout = setTimeout(() => {
             const searchTerm = this.value.trim();
             loadWordCloud(searchTerm);
         }, 500);
     });
-    
+
     // Also trigger search on Enter key
     searchInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
@@ -51,7 +51,7 @@ async function loadOverviewStats() {
     try {
         const response = await fetch('/api/stats/overview');
         const data = await response.json();
-        
+
         document.getElementById('totalJobs').textContent = data.total_jobs.toLocaleString();
         document.getElementById('totalOrgs').textContent = data.total_organizations.toLocaleString();
         document.getElementById('avgJobsPerOrg').textContent = Math.round(data.avg_jobs_per_org);
@@ -68,13 +68,13 @@ async function loadJobsPerDay() {
     try {
         const response = await fetch('/api/stats/jobs-per-day');
         const data = await response.json();
-        
+
         const ctx = document.getElementById('jobsPerDayChart').getContext('2d');
-        
+
         if (jobsPerDayChart) {
             jobsPerDayChart.destroy();
         }
-        
+
         jobsPerDayChart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -128,21 +128,21 @@ async function loadTopCountries() {
     try {
         const response = await fetch('/api/stats/top-countries');
         const data = await response.json();
-        
+
         const ctx = document.getElementById('countriesChart').getContext('2d');
-        
+
         if (countriesChart) {
             countriesChart.destroy();
         }
-        
+
         const colors = [
             '#667eea', '#764ba2', '#f093fb', '#f5576c',
             '#4facfe', '#00f2fe', '#43e97b', '#38f9d7'
         ];
-        
+
         // Calculate total for percentage calculation
         const total = data.counts.reduce((sum, count) => sum + count, 0);
-        
+
         countriesChart = new Chart(ctx, {
             type: 'doughnut',
             data: {
@@ -187,48 +187,48 @@ async function loadTopCountries() {
 async function loadWordCloud(searchTerm = '') {
     const canvas = document.getElementById('canvas');
     const container = canvas ? canvas.parentElement : document.querySelector('.word-cloud-container');
-    
+
     if (!container) {
         console.error('Word cloud container not found');
         return;
     }
-    
+
     try {
         // Show loading state
         const loadingMessage = searchTerm ? 
             `Searching for "${searchTerm}"...` : 
             'Loading word cloud...';
-            
+
         container.innerHTML = `
             <div class="loading-overlay">
                 <div class="loading-spinner"></div>
                 <p style="margin-top: 1rem; color: #666;">${loadingMessage}</p>
             </div>
         `;
-        
+
         // Build URL with search parameter
         const url = searchTerm ? 
             `/api/stats/word-cloud?q=${encodeURIComponent(searchTerm)}` : 
             '/api/stats/word-cloud';
-            
+
         const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const data = await response.json();
         console.log('Word cloud data received:', data);
-        
+
         if (data.error) {
             throw new Error(data.error);
         }
-        
+
         if (!data.words || data.words.length === 0) {
             // Show no results message
             const noResultsMessage = searchTerm ? 
                 `No results found for "${searchTerm}". Try a different search term.` : 
                 'No word data available.';
-                
+
             container.innerHTML = `
                 <div class="no-results-message" style="text-align: center; padding: 2rem; color: #666;">
                     <p>${noResultsMessage}</p>
@@ -240,16 +240,16 @@ async function loadWordCloud(searchTerm = '') {
 
         // Restore canvas element
         container.innerHTML = '<canvas id="canvas"></canvas>';
-        
+
         createHTMLWordCloud(data.words, searchTerm);
-        
+
     } catch (error) {
         console.error('Error loading word cloud:', error);
-        
+
         const errorMessage = searchTerm ? 
             `Error searching for "${searchTerm}". Please try again.` : 
             'Error loading word cloud. Please try again.';
-            
+
         container.innerHTML = `
             <div class="error-message" style="text-align: center; padding: 2rem; color: #ff6b6b;">
                 <p>${errorMessage}</p>
@@ -263,39 +263,39 @@ async function loadWordCloud(searchTerm = '') {
 function createHTMLWordCloud(words, searchTerm = '') {
     const container = document.getElementById('canvas').parentElement;
     const limitedWords = words.slice(0, 50); // Show more words for better search results
-    
+
     if (limitedWords.length === 0) {
         return;
     }
-    
+
     const maxCount = Math.max(...limitedWords.map(w => w.count));
     const minCount = Math.min(...limitedWords.map(w => w.count));
-    
+
     const colors = [
         '#667eea', '#764ba2', '#f093fb', '#f5576c',
         '#4facfe', '#00f2fe', '#43e97b', '#38f9d7',
         '#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4',
         '#a8e6cf', '#fdcb6e', '#6c5ce7', '#fd79a8'
     ];
-    
+
     // Shuffle words for more natural distribution
     const shuffledWords = [...limitedWords].sort(() => Math.random() - 0.5);
-    
+
     const wordElements = shuffledWords.map((word, index) => {
         const ratio = maxCount > minCount ? (word.count - minCount) / (maxCount - minCount) : 0.5;
         const fontSize = Math.round(16 + ratio * 32);
         const color = colors[index % colors.length];
-        
+
         // Add some random rotation for visual interest
         const rotations = [0, -15, -10, -5, 5, 10, 15];
         const rotation = rotations[Math.floor(Math.random() * rotations.length)];
-        
+
         // Highlight search terms
         const isSearchMatch = searchTerm && 
             word.text.toLowerCase().includes(searchTerm.toLowerCase());
         const extraStyle = isSearchMatch ? 
             'border: 2px solid #667eea; background: rgba(102, 126, 234, 0.1); padding: 2px 6px; border-radius: 4px;' : '';
-        
+
         return `<span class="word-cloud-word" 
                       style="font-size: ${fontSize}px; 
                              color: ${color}; 
@@ -308,20 +308,20 @@ function createHTMLWordCloud(words, searchTerm = '') {
                     ${word.text}
                 </span>`;
     }).join(' ');
-    
+
     // Add search context message
     const searchMessage = searchTerm ? 
         `<div class="search-context" style="text-align: center; padding: 0.5rem; background: #ffffff; border-radius: 4px;">
             <small class="text-muted">Showing words from jobs matching: "<strong>${searchTerm}</strong>" (${limitedWords.length} most common words)</small>
          </div>` : '';
-    
+
     container.innerHTML = `
         ${searchMessage}
         <div class="html-word-cloud" id="html-word-cloud">
             ${wordElements}
         </div>
     `;
-    
+
     // Add click handlers for interactivity
     container.querySelectorAll('.word-cloud-word').forEach(word => {
         // word.addEventListener('click', function() {
@@ -332,13 +332,13 @@ function createHTMLWordCloud(words, searchTerm = '') {
         //         ' across all job postings';
         //     alert(`"${text}" appears ${count} times${contextMessage}`);
         // });
-        
+
         // Add hover effect
         word.addEventListener('mouseenter', function() {
             this.style.transform = this.style.transform.replace('scale(1)', '') + ' scale(1.1)';
             this.style.transition = 'transform 0.2s ease';
         });
-        
+
         word.addEventListener('mouseleave', function() {
             this.style.transform = this.style.transform.replace(' scale(1.1)', '');
         });
