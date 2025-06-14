@@ -325,6 +325,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const params = new URLSearchParams(formData);
       fetchFilteredResults(params.toString());
     }
+
+    refreshActiveTab();
   };
 
   window.fetchFilteredResults = function(queryParams) {
@@ -360,6 +362,8 @@ document.addEventListener('DOMContentLoaded', () => {
       .catch(error => {
         console.error('Error fetching filtered results:', error);
       });
+
+    refreshActiveTab();
   };
 
   const slider = document.getElementById('date-slider');
@@ -386,6 +390,36 @@ document.addEventListener('DOMContentLoaded', () => {
       updateLabelAndColor(e.target.value);
     });
 
+  }
+
+  // Function to refresh the active tab when filters change
+  function refreshActiveTab() {
+    const activeTab = document.querySelector('#mainTabs .nav-link.active');
+    if (activeTab) {
+      const targetTab = activeTab.getAttribute('data-bs-target');
+      const searchParams = getCurrentSearchParams();
+      
+      if (targetTab === '#organizations' && typeof loadOrganizations === 'function') {
+        loadOrganizations(searchParams);
+      } else if (targetTab === '#insights' && typeof loadInsights === 'function') {
+        loadInsights(searchParams);
+      }
+    }
+  }
+
+  // Helper function to get current search parameters (make it available globally)
+  function getCurrentSearchParams() {
+    const form = document.getElementById('filters-form');
+    if (!form) return '';
+    
+    const formData = new FormData(form);
+    const params = new URLSearchParams();
+    
+    for (let [key, value] of formData.entries()) {
+      if (value) params.append(key, value);
+    }
+    
+    return params.toString();
   }
 
   // Handle Load More functionality
@@ -459,7 +493,7 @@ document.addEventListener('DOMContentLoaded', () => {
     navbarForm.addEventListener('submit', (e) => {
       e.preventDefault(); // Prevent default form submission
 
-      const input = document.getElementById('navbar-search-input');
+      const input = document.getElementById('search-input');
       const rawQuery = input.value.trim();
       const query = sanitizeInput(rawQuery);
 
@@ -491,6 +525,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Fetch results with clean filters
       fetchFilteredResults(params.toString());
+
+      refreshActiveTab();
     });
   }
 
@@ -563,7 +599,7 @@ document.addEventListener('DOMContentLoaded', () => {
         $('#organization-select').selectpicker('deselectAll');
 
         // Sync search inputs
-        const navbarSearchInput = document.getElementById('navbar-search-input');
+        const navbarSearchInput = document.getElementById('search-input');
         if (navbarSearchInput) {
           navbarSearchInput.value = currentQuery;
         }

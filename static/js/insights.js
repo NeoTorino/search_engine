@@ -1,55 +1,29 @@
 let jobsPerDayChart = null;
 let countriesChart = null;
-let organizationsData = [];
-let wordCloudSearchTimeout = null;
 
-// Load all data when page loads
+// Main load function that accepts search parameters
+async function loadInsights(searchParams = '') {
+    loadOverviewInsights(searchParams);
+    loadJobsPerDay(searchParams);
+    loadTopCountries(searchParams);
+    loadWordCloud(searchParams);
+}
+
+// Load all data when page loads (but don't auto-load - wait for tab switch)
 document.addEventListener('DOMContentLoaded', function() {
-    loadOverviewInsights();
-    loadJobsPerDay();
-    loadTopCountries();
-    loadWordCloud();
-    setupWordCloudSearch();
+    // Don't auto-load insights - wait for tab switch
+    // The tab switching in search.html will call loadInsights() when needed
 });
 
 function showError(elementId) {
     document.getElementById(elementId).innerHTML = '<small style="color: #ff6b6b;">Error</small>';
 }
 
-// Setup word cloud search functionality
-function setupWordCloudSearch() {
-    const searchInput = document.getElementById('wordCloudSearch');
-    if (!searchInput) return;
-
-    searchInput.addEventListener('input', function() {
-        // Clear previous timeout
-        if (wordCloudSearchTimeout) {
-            clearTimeout(wordCloudSearchTimeout);
-        }
-
-        // Debounce the search - wait 500ms after user stops typing
-        wordCloudSearchTimeout = setTimeout(() => {
-            const searchTerm = this.value.trim();
-            loadWordCloud(searchTerm);
-        }, 500);
-    });
-
-    // Also trigger search on Enter key
-    searchInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            if (wordCloudSearchTimeout) {
-                clearTimeout(wordCloudSearchTimeout);
-            }
-            const searchTerm = this.value.trim();
-            loadWordCloud(searchTerm);
-        }
-    });
-}
-
 // Load overview statistics
-async function loadOverviewInsights() {
+async function loadOverviewInsights(searchParams = '') {
     try {
-        const response = await fetch('/api/insights/overview');
+        const url = searchParams ? `/api/insights/overview?${searchParams}` : '/api/insights/overview';
+        const response = await fetch(url);
         const data = await response.json();
 
         document.getElementById('totalJobs').textContent = data.total_jobs.toLocaleString();
@@ -64,9 +38,10 @@ async function loadOverviewInsights() {
 }
 
 // Load jobs per day chart
-async function loadJobsPerDay() {
+async function loadJobsPerDay(searchParams = '') {
     try {
-        const response = await fetch('/api/insights/jobs-per-day');
+        const url = searchParams ? `/api/insights/jobs-per-day?${searchParams}` : '/api/insights/jobs-per-day';
+        const response = await fetch(url);
         const data = await response.json();
 
         const ctx = document.getElementById('jobsPerDayChart').getContext('2d');
@@ -124,9 +99,10 @@ async function loadJobsPerDay() {
 }
 
 // Load top countries chart
-async function loadTopCountries() {
+async function loadTopCountries(searchParams = '') {
     try {
-        const response = await fetch('/api/insights/top-countries');
+        const url = searchParams ? `/api/insights/top-countries?${searchParams}` : '/api/insights/top-countries';
+        const response = await fetch(url);
         const data = await response.json();
 
         const ctx = document.getElementById('countriesChart').getContext('2d');
@@ -183,8 +159,8 @@ async function loadTopCountries() {
     }
 }
 
-// Load word cloud with optional search term
-async function loadWordCloud(searchTerm = '') {
+// Load word cloud (no search input needed - uses main search parameters)
+async function loadWordCloud(searchParams = '') {
     const canvas = document.getElementById('canvas');
     const container = canvas ? canvas.parentElement : document.querySelector('.word-cloud-container');
 
@@ -195,21 +171,15 @@ async function loadWordCloud(searchTerm = '') {
 
     try {
         // Show loading state
-        const loadingMessage = searchTerm ? 
-            `Searching for "${searchTerm}"...` : 
-            'Loading word cloud...';
-
         container.innerHTML = `
             <div class="loading-overlay">
                 <div class="loading-spinner"></div>
-                <p style="margin-top: 1rem; color: #666;">${loadingMessage}</p>
+                <p style="margin-top: 1rem; color: #666;">Loading word cloud...</p>
             </div>
         `;
 
-        // Build URL with search parameter
-        const url = searchTerm ? 
-            `/api/insights/word-cloud?q=${encodeURIComponent(searchTerm)}` : 
-            '/api/insights/word-cloud';
+        // Build URL with search parameters
+        const url = searchParams ? `/api/insights/word-cloud?${searchParams}` : '/api/insights/word-cloud';
 
         const response = await fetch(url);
         if (!response.ok) {
@@ -217,7 +187,6 @@ async function loadWordCloud(searchTerm = '') {
         }
 
         const data = await response.json();
-        console.log('Word cloud data received:', data);
 
         if (data.error) {
             throw new Error(data.error);
@@ -225,14 +194,9 @@ async function loadWordCloud(searchTerm = '') {
 
         if (!data.words || data.words.length === 0) {
             // Show no results message
-            const noResultsMessage = searchTerm ? 
-                `No results found for "${searchTerm}". Try a different search term.` : 
-                'No word data available.';
-
             container.innerHTML = `
                 <div class="no-results-message" style="text-align: center; padding: 2rem; color: #666;">
-                    <p>${noResultsMessage}</p>
-                    ${searchTerm ? '<p><small>Try searching for job titles like "manager", "developer", or "analyst"</small></p>' : ''}
+                    <p>No word data available for the current filters.</p>
                 </div>
             `;
             return;
@@ -241,28 +205,24 @@ async function loadWordCloud(searchTerm = '') {
         // Restore canvas element
         container.innerHTML = '<canvas id="canvas"></canvas>';
 
-        createHTMLWordCloud(data.words, searchTerm);
+        createHTMLWordCloud(data.words);
 
     } catch (error) {
         console.error('Error loading word cloud:', error);
 
-        const errorMessage = searchTerm ? 
-            `Error searching for "${searchTerm}". Please try again.` : 
-            'Error loading word cloud. Please try again.';
-
         container.innerHTML = `
             <div class="error-message" style="text-align: center; padding: 2rem; color: #ff6b6b;">
-                <p>${errorMessage}</p>
-                <button onclick="loadWordCloud('${searchTerm}')" class="btn btn-sm btn-outline-primary">Retry</button>
+                <p>Error loading word cloud. Please try again.</p>
+                <button onclick="loadWordCloud('${searchParams}')" class="btn btn-sm btn-outline-primary">Retry</button>
             </div>
         `;
     }
 }
 
-// HTML-based word cloud (improved with search context)
-function createHTMLWordCloud(words, searchTerm = '') {
+// HTML-based word cloud (simplified - no search context needed)
+function createHTMLWordCloud(words) {
     const container = document.getElementById('canvas').parentElement;
-    const limitedWords = words.slice(0, 50); // Show more words for better search results
+    const limitedWords = words.slice(0, 50);
 
     if (limitedWords.length === 0) {
         return;
@@ -290,50 +250,26 @@ function createHTMLWordCloud(words, searchTerm = '') {
         const rotations = [0, -15, -10, -5, 5, 10, 15];
         const rotation = rotations[Math.floor(Math.random() * rotations.length)];
 
-        // Highlight search terms
-        const isSearchMatch = searchTerm && 
-            word.text.toLowerCase().includes(searchTerm.toLowerCase());
-        const extraStyle = isSearchMatch ? 
-            'border: 2px solid #667eea; background: rgba(102, 126, 234, 0.1); padding: 2px 6px; border-radius: 4px;' : '';
-
         return `<span class="word-cloud-word" 
                       style="font-size: ${fontSize}px; 
                              color: ${color}; 
                              font-weight: ${ratio > 0.7 ? 'bold' : ratio > 0.4 ? '600' : 'normal'};
                              transform: rotate(${rotation}deg);
-                             opacity: ${0.8 + ratio * 0.2};
-                             ${extraStyle}" 
+                             opacity: ${0.8 + ratio * 0.2};" 
                       title="${word.text}: ${word.count} mentions"
                       data-count="${word.count}">
                     ${word.text}
                 </span>`;
     }).join(' ');
 
-    // Add search context message
-    const searchMessage = searchTerm ? 
-        `<div class="search-context" style="text-align: center; padding: 0.5rem; background: #ffffff; border-radius: 4px;">
-            <small class="text-muted">Showing words from jobs matching: "<strong>${searchTerm}</strong>" (${limitedWords.length} most common words)</small>
-         </div>` : '';
-
     container.innerHTML = `
-        ${searchMessage}
         <div class="html-word-cloud" id="html-word-cloud">
             ${wordElements}
         </div>
     `;
 
-    // Add click handlers for interactivity
+    // Add hover effects
     container.querySelectorAll('.word-cloud-word').forEach(word => {
-        // word.addEventListener('click', function() {
-        //     const count = this.getAttribute('data-count');
-        //     const text = this.textContent;
-        //     const contextMessage = searchTerm ? 
-        //         ` in jobs matching "${searchTerm}"` : 
-        //         ' across all job postings';
-        //     alert(`"${text}" appears ${count} times${contextMessage}`);
-        // });
-
-        // Add hover effect
         word.addEventListener('mouseenter', function() {
             this.style.transform = this.style.transform.replace('scale(1)', '') + ' scale(1.1)';
             this.style.transition = 'transform 0.2s ease';

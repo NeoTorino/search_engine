@@ -5,52 +5,254 @@
 {% block head %}
     {{ super() }}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/search.css') }}?v={{ time.time() }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/orgs.css') }}?v={{ time.time() }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/insights.css') }}?v={{ time.time() }}" />
+    <style>
+        /* Tab styles */
+        .nav-tabs {
+            border-bottom: 2px solid #dee2e6;
+            margin-bottom: 2rem;
+        }
+        
+        .nav-tabs .nav-link {
+            border: none;
+            color: #6c757d;
+            font-weight: 500;
+            padding: 1rem 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-tabs .nav-link:hover {
+            border: none;
+            color: #007bff;
+        }
+        
+        .nav-tabs .nav-link.active {
+            color: #007bff;
+            background-color: transparent;
+            border-bottom: 2px solid #007bff;
+            border-radius: 0;
+        }
+        
+        .tab-content {
+            min-height: 400px;
+        }
+        
+        .tab-pane {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 {% endblock %}
 
 {% block content %}
+<div class="container py-4">
+    <!-- Search Section -->
+    <div class="search-section mb-4">
+        <!-- Filters -->
+        {% include '_filters.html' %}
 
-        <div class="container py-4">
+        <p class="text-muted liner">
+            {% if is_empty_query %}
+                Showing all {{ "{:,}".format(total_results) }} result{{ total_results != 1 and 's' or '' }}
+            {% else %}
+                About {{ "{:,}".format(total_results) }} result{{ total_results != 1 and 's' or '' }} for "<strong>{{ query }}</strong>"
+            {% endif %}
+        </p>
+    </div>
 
-            <!-- Filters -->
-            {% include '_filters.html' %}
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-tabs" id="mainTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="results-tab" data-bs-toggle="tab" data-bs-target="#results" type="button" role="tab" aria-controls="results" aria-selected="true">
+                <i class="fas fa-search me-2"></i>Search Results
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="organizations-tab" data-bs-toggle="tab" data-bs-target="#organizations" type="button" role="tab" aria-controls="organizations" aria-selected="false">
+                <i class="fas fa-building me-2"></i>Organizations
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="insights-tab" data-bs-toggle="tab" data-bs-target="#insights" type="button" role="tab" aria-controls="insights" aria-selected="false">
+                <i class="fas fa-chart-bar me-2"></i>Insights
+            </button>
+        </li>
+    </ul>
 
-            <p class="text-muted liner">
-                {% if is_empty_query %}
-                    Showing all {{ "{:,}".format(total_results) }} result{{ total_results != 1 and 's' or '' }}
-                {% else %}
-                    About {{ "{:,}".format(total_results) }} result{{ total_results != 1 and 's' or '' }} for "<strong>{{ query }}</strong>"
-                {% endif %}
-            </p>
-
-            <!-- Results -->
+    <!-- Tab Content -->
+    <div class="tab-content" id="mainTabContent">
+        <!-- Results Tab -->
+        <div class="tab-pane fade show active" id="results" role="tabpanel" aria-labelledby="results-tab" tabindex="0">
             {% if results %}
                 <div class="row" id="results-container">{% include '_results.html' %}</div>
 
                 {% if show_load_more %}
                 <div class="text-center mt-4">
-                <button
-                    id="load-more"
-                    class="btn btn-outline-primary"
-                    data-query="{{ query }}"
-                    data-offset="{{ offset + 12 }}"
-                    data-country="{{ selected_countries | join(',') }}"
-                    data-date="{{ selected_date }}"
-                >
-                    Load More
-                </button>
+                    <button
+                        id="load-more"
+                        class="btn btn-outline-primary"
+                        data-query="{{ query }}"
+                        data-offset="{{ offset + 12 }}"
+                        data-country="{{ selected_countries | join(',') }}"
+                        data-date="{{ selected_date }}"
+                    >
+                        Load More
+                    </button>
                 </div>
                 {% endif %}
             {% else %}
                 {% if is_empty_query %}
-                    <p class="text-muted">No results found</p>
+                    <div class="text-center py-5">
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No results found</p>
+                    </div>
                 {% else %}
-                    <p class="text-muted">No results found for "{{ query }}"</p>
+                    <div class="text-center py-5">
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No results found for "{{ query }}"</p>
+                    </div>
                 {% endif %}
             {% endif %}
-
         </div>
 
+        <!-- Organizations Tab -->
+        <div class="tab-pane fade" id="organizations" role="tabpanel" aria-labelledby="organizations-tab" tabindex="0">
+            <div class="stats-container">
+                <!-- Organizations Table -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="table-container">
+                            <div class="table-responsive">
+                                <div class="row mb-3">
+                                    <div class="col-12">
+                                        <input type="text" id="searchOrgs" class="form-control" placeholder="Search organizations...">
+                                    </div>
+                                </div>
+                                <table class="table table-hover mb-0" id="orgsTable">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Organizations</th>
+                                            <th scope="col">Total Jobs</th>
+                                            <th scope="col">Last Updated</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="orgsTableBody">
+                                        <tr>
+                                            <td colspan="3" class="text-center">
+                                                <div class="loading-spinner"></div> Loading organizations...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Insights Tab -->
+        <div class="tab-pane fade" id="insights" role="tabpanel" aria-labelledby="insights-tab" tabindex="0">
+            <div class="insights-container">
+                <!-- Overview Insights Cards -->
+                <div class="row mb-5">
+                    <div class="col-md-4">
+                        <div class="insights-card text-center">
+                            <div class="stat-number" id="totalJobs">
+                                <div class="loading-spinner"></div>
+                            </div>
+                            <div class="stat-label">Total Jobs</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="insights-card text-center">
+                            <div class="stat-number" id="totalOrgs">
+                                <div class="loading-spinner"></div>
+                            </div>
+                            <div class="stat-label">Organizations</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="insights-card text-center">
+                            <div class="stat-number" id="avgJobsPerOrg">
+                                <div class="loading-spinner"></div>
+                            </div>
+                            <div class="stat-label">Avg Jobs/Org</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="row mb-5">
+                    <div class="col-lg-8">
+                        <div class="chart-container">
+                            <h3 class="mb-4">Jobs Posted Per Day (Last 30 Days)</h3>
+                            <canvas id="jobsPerDayChart" style="max-height: 400px;"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="chart-container">
+                            <h3 class="mb-4">Top Countries</h3>
+                            <canvas id="countriesChart" style="max-height: 400px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Word Cloud with improved structure -->
+                <div class="row mb-5">
+                    <div class="col-12">
+                        <div class="chart-container">
+                            <h3 class="mb-4">Job Keywords Word Cloud</h3>
+                            <div class="word-cloud-container">
+                                <canvas id="canvas" width="800" height="500"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
+    <!-- Chart.js for insights -->
+    <script nonce="{{ nonce }}" src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Load all JavaScript files -->
+    <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/orgs.js') }}?v={{ time.time() }}"></script>
+    <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/insights.js') }}?v={{ time.time() }}"></script>
+    
+    <script nonce="{{ nonce }}">
+        // Initialize tab functionality and load data when tabs are switched
+        document.addEventListener('DOMContentLoaded', function() {
+            const tabTriggerList = document.querySelectorAll('#mainTabs button[data-bs-toggle="tab"]');
+            
+            tabTriggerList.forEach(tabTrigger => {
+                tabTrigger.addEventListener('shown.bs.tab', event => {
+                    const targetTab = event.target.getAttribute('data-bs-target');
+                    
+                    // Load organizations data when organizations tab is shown
+                    if (targetTab === '#organizations' && typeof window.loadOrganizations === 'function') {
+                        const searchParams = getCurrentSearchParams();
+                        window.loadOrganizations(searchParams);
+                    }
+                    
+                    // Load insights data when insights tab is shown
+                    if (targetTab === '#insights' && typeof window.loadInsights === 'function') {
+                        const searchParams = getCurrentSearchParams();
+                        window.loadInsights(searchParams);
+                    }
+                });
+            });
+            
+            // Make getCurrentSearchParams available globally for filter updates
+            window.getCurrentSearchParams = getCurrentSearchParams;
+        });
+    </script>
 {% endblock %}

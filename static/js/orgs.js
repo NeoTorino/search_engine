@@ -4,8 +4,6 @@ let currentSort = { column: null, direction: 'asc' };
 
 // Load all data when page loads
 document.addEventListener('DOMContentLoaded', function() {
-    loadOrganizations();
-
     // Setup search functionality
     document.getElementById('searchOrgs').addEventListener('input', filterOrganizations);
 
@@ -122,9 +120,10 @@ function updateSortIndicators() {
 }
 
 // Load organizations table
-async function loadOrganizations() {
+async function loadOrganizations(searchParams = '') {
     try {
-        const response = await fetch('/api/insights/organizations');
+        const url = searchParams ? `/api/insights/organizations?${searchParams}` : '/api/insights/organizations';
+        const response = await fetch(url);
         const data = await response.json();
 
         organizationsData = data.organizations;
