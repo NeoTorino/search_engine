@@ -124,7 +124,7 @@ function updateSortIndicators() {
 // Load organizations table
 async function loadOrganizations() {
     try {
-        const response = await fetch('/api/stats/organizations');
+        const response = await fetch('/api/insights/organizations');
         const data = await response.json();
 
         organizationsData = data.organizations;

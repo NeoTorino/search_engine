@@ -15,6 +15,6 @@ def organizations():
 def sources():
     return render_template("sources.html", time=time)
 
-@pages.route("/stats")
+@pages.route("/insights")
 def stats():
-    return render_template("stats.html", time=time)
+    return render_template("insights.html", time=time)

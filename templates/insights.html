@@ -1,20 +1,20 @@
 {% extends "base.html" %}
 
-{% block title %}Stats - JobFinder{% endblock %}
+{% block title %}Insights - JobFinder{% endblock %}
 
 {% block head %}
     {{ super() }}
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/stats.css') }}?v={{ time.time() }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/insights.css') }}?v={{ time.time() }}" />
 {% endblock %}
 
 {% block content %}
-<div class="stats-container">
+<div class="insights-container">
     <div class="container">
 
-        <!-- Overview Stats Cards -->
+        <!-- Overview Insights Cards -->
         <div class="row mb-5">
             <div class="col-md-4">
-                <div class="stats-card text-center">
+                <div class="insights-card text-center">
                     <div class="stat-number" id="totalJobs">
                         <div clas   s="loading-spinner"></div>
                     </div>
@@ -22,7 +22,7 @@
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="stats-card text-center">
+                <div class="insights-card text-center">
                     <div class="stat-number" id="totalOrgs">
                         <div class="loading-spinner"></div>
                     </div>
@@ -30,7 +30,7 @@
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="stats-card text-center">
+                <div class="insights-card text-center">
                     <div class="stat-number" id="avgJobsPerOrg">
                         <div class="loading-spinner"></div>
                     </div>
@@ -76,5 +76,5 @@
 
 {% block scripts %}
     <script nonce="{{ nonce }}" src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/stats.js') }}?v={{ time.time() }}"></script>
+    <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/insights.js') }}?v={{ time.time() }}"></script>
 {% endblock %}

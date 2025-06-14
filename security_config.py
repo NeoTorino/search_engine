@@ -50,6 +50,10 @@ class SecurityEnforcer:
         )
         self.logger = logging.getLogger('security')
 
+        # Validate Redis connection at startup
+        if not self.validate_redis_connection():
+            self.logger.error("Redis connection validation failed - security features may be degraded")
+
     def get_client_fingerprint(self, req):
         """Create a unique fingerprint for the client"""
         components = [
@@ -106,6 +110,23 @@ class SecurityEnforcer:
 
         return True
 
+    def validate_redis_connection(self):
+        """Validate Redis connection and configuration"""
+        try:
+            # Test connection
+            self.redis_client.ping()
+            
+            # Check if AUTH is configured (for production)
+            if os.getenv('FLASK_ENV') == 'production':
+                redis_url = os.getenv('REDIS_URL', '')
+                if not ('password' in redis_url or '@' in redis_url):
+                    self.logger.warning("Redis authentication not configured in production")
+            
+            return True
+        except Exception as e:
+            self.logger.error("Redis connection failed: %s", e)
+            return False
+
 def create_security_middleware(app, security_enforcer):
     """Create comprehensive security middleware"""
 
@@ -141,22 +162,29 @@ def create_security_middleware(app, security_enforcer):
             'dirbuster', 'gobuster', 'wfuzz', 'ffuf', 'hydra'
         ]
 
-        if any(pattern in user_agent.lower() for pattern in suspicious_ua_patterns):
-            security_enforcer.block_ip(client_ip)
-            log_security_event("ATTACK_TOOL_DETECTED", f"UA: {user_agent}, IP: {client_ip}")
-            abort(403)
+        ua_lower = user_agent.lower()
+        if any(pattern in ua_lower for pattern in suspicious_ua_patterns):
+            # Log but don't immediately block - attackers can change UA easily
+            security_enforcer.increment_suspicious_activity(client_ip)
+            log_security_event("SUSPICIOUS_USER_AGENT", f"UA: {user_agent}, IP: {client_ip}", "WARNING")
+            # Only block if they're also doing other suspicious things
 
-        # Validate Host header more strictly
+        # Validate Host header more strictly (with port handling)
         host = request.headers.get('Host', '')
         allowed_hosts = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
-        if host and not any(allowed_host in host for allowed_host in allowed_hosts):
+        # Strip port from host for comparison
+        host_without_port = host.split(':')[0] if host else ''
+
+        if host and host_without_port not in allowed_hosts:
             security_enforcer.increment_suspicious_activity(client_ip)
             log_security_event("INVALID_HOST_HEADER", f"Host: {host}, IP: {client_ip}")
             abort(400)
 
-        # Check for path traversal attempts
-        if '../' in request.path or '..\\' in request.path:
+        # Check for path traversal attempts (including encoded variants)
+        path_lower = request.path.lower()
+        traversal_patterns = ['../', '..\\', '%2e%2e%2f', '%2e%2e%5c', '..%2f', '..%5c', '%2e%2e/', '%2e%2e\\']
+        if any(pattern in path_lower for pattern in traversal_patterns):
             security_enforcer.block_ip(client_ip)
             log_security_event("PATH_TRAVERSAL_ATTEMPT", f"Path: {request.path}, IP: {client_ip}")
             abort(403)
@@ -285,8 +313,8 @@ def log_security_event(event_type, details, severity="INFO", ip=None):
         redis_client = redis.Redis.from_url(os.getenv('REDIS_URL', 'redis://localhost:6379'))
         redis_client.lpush('security_events', str(log_entry))
         redis_client.ltrim('security_events', 0, 999)  # Keep last 1000 events
-    except:
-        pass  # Don't fail if Redis is unavailable
+    except (redis.RedisError, ConnectionError) as e:
+        logger.warning("Redis unavailable for security event storage: %s", e)
 
 # Database security helpers
 class DatabaseSecurity:

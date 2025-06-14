@@ -1,4 +1,5 @@
 import secrets
+from datetime import datetime
 from flask import g, request, redirect
 from security_config import SecurityEnforcer, create_security_middleware, log_security_event
 from .extensions import get_extensions
@@ -51,7 +52,6 @@ def setup_context_processors(app):
     @app.context_processor
     def inject_security_context():
         """Inject security context into templates"""
-        from datetime import datetime
         return {
             'nonce': getattr(g, 'csp_nonce', ''),
             'year': datetime.utcnow().year,
@@ -60,7 +60,7 @@ def setup_context_processors(app):
         }
 
 def setup_rate_limiting(app):
-    """Setup rate limiting rules for different endpoints"""
+    """Rate limiting is applied directly to route decorators"""
     extensions = get_extensions()
     limiter = extensions.get('limiter')
 
@@ -68,18 +68,4 @@ def setup_rate_limiting(app):
         app.logger.warning("Rate limiter not available, skipping rate limit setup")
         return
 
-    rate_limits = app.config.get('RATE_LIMITS', {})
-
-    # Search endpoint rate limiting
-    if 'search' in rate_limits:
-        @limiter.limit(rate_limits['search'][2])  # Most restrictive
-        def search_rate_limit():
-            return request.endpoint == 'main.search_results'
-
-    # API endpoint rate limiting
-    if 'api' in rate_limits:
-        @limiter.limit(rate_limits['api'][2])
-        def api_rate_limit():
-            return request.endpoint and request.endpoint.startswith('main.api.')
-
-    app.logger.info("Rate limiting rules configured")
+    app.logger.info("Rate limiting configured via route decorators")

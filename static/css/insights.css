@@ -1,11 +1,11 @@
-/* Stats Container */
-.stats-container {
+/* Insights Container */
+.insights-container {
     min-height: 100vh;
     padding: 2rem 0;
 }
 
-/* Stats Cards */
-.stats-card {
+/* Insights Cards */
+.insights-card {
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
     border-radius: 20px;
@@ -15,7 +15,7 @@
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.stats-card:hover {
+.insights-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 25px 50px rgba(0,0,0,0.15);
 }

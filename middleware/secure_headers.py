@@ -4,8 +4,10 @@ import secrets
 def apply_secure_headers(response):
     """Apply comprehensive security headers"""
 
-    # Get CSP nonce
-    nonce = getattr(g, 'csp_nonce', secrets.token_urlsafe(16))
+    # Generate nonce once per request
+    if not hasattr(g, 'csp_nonce'):
+        g.csp_nonce = secrets.token_urlsafe(16)
+    nonce = g.csp_nonce
 
     # Content Security Policy (very strict)
     csp_policy = (
@@ -28,7 +30,6 @@ def apply_secure_headers(response):
     # Security headers
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-Frame-Options'] = 'DENY'
-    response.headers['X-XSS-Protection'] = '1; mode=block'
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
 
     # HSTS (if HTTPS)

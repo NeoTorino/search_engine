@@ -20,7 +20,7 @@ class BaseConfig:
     # Session security
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'  # Override in production
-    SESSION_COOKIE_NAME = '__Secure-session'
+    SESSION_COOKIE_NAME = '__Secure-session' if os.getenv('FLASK_ENV') == 'production' else 'session'
 
     # CSRF protection
     WTF_CSRF_TIME_LIMIT = 3600

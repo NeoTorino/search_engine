@@ -5,7 +5,7 @@ let wordCloudSearchTimeout = null;
 
 // Load all data when page loads
 document.addEventListener('DOMContentLoaded', function() {
-    loadOverviewStats();
+    loadOverviewInsights();
     loadJobsPerDay();
     loadTopCountries();
     loadWordCloud();
@@ -47,16 +47,16 @@ function setupWordCloudSearch() {
 }
 
 // Load overview statistics
-async function loadOverviewStats() {
+async function loadOverviewInsights() {
     try {
-        const response = await fetch('/api/stats/overview');
+        const response = await fetch('/api/insights/overview');
         const data = await response.json();
 
         document.getElementById('totalJobs').textContent = data.total_jobs.toLocaleString();
         document.getElementById('totalOrgs').textContent = data.total_organizations.toLocaleString();
         document.getElementById('avgJobsPerOrg').textContent = Math.round(data.avg_jobs_per_org);
     } catch (error) {
-        console.error('Error loading overview stats:', error);
+        console.error('Error loading overview insights:', error);
         showError('totalJobs');
         showError('totalOrgs');
         showError('avgJobsPerOrg');
@@ -66,7 +66,7 @@ async function loadOverviewStats() {
 // Load jobs per day chart
 async function loadJobsPerDay() {
     try {
-        const response = await fetch('/api/stats/jobs-per-day');
+        const response = await fetch('/api/insights/jobs-per-day');
         const data = await response.json();
 
         const ctx = document.getElementById('jobsPerDayChart').getContext('2d');
@@ -126,7 +126,7 @@ async function loadJobsPerDay() {
 // Load top countries chart
 async function loadTopCountries() {
     try {
-        const response = await fetch('/api/stats/top-countries');
+        const response = await fetch('/api/insights/top-countries');
         const data = await response.json();
 
         const ctx = document.getElementById('countriesChart').getContext('2d');
@@ -208,8 +208,8 @@ async function loadWordCloud(searchTerm = '') {
 
         // Build URL with search parameter
         const url = searchTerm ? 
-            `/api/stats/word-cloud?q=${encodeURIComponent(searchTerm)}` : 
-            '/api/stats/word-cloud';
+            `/api/insights/word-cloud?q=${encodeURIComponent(searchTerm)}` : 
+            '/api/insights/word-cloud';
 
         const response = await fetch(url);
         if (!response.ok) {

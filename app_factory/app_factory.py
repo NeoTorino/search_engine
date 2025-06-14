@@ -3,7 +3,6 @@ import secrets
 import urllib3
 from datetime import datetime
 from flask import Flask, request, redirect, g
-from werkzeug.middleware.proxy_fix import ProxyFix
 from dotenv import load_dotenv
 
 from .extensions import init_extensions
@@ -25,17 +24,13 @@ def create_app(config_class=None):
     # Setup enhanced logging first
     security_logger = security_monitor.logger
 
-    # Create Flask app
-    app = Flask(__name__)
+    # Get the project root directory (one level up from app_factory)
+    basedir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 
-    # Setup proxy handling for production deployment
-    app.wsgi_app = ProxyFix(
-        app.wsgi_app,
-        x_for=1,
-        x_proto=1,
-        x_host=1,
-        x_prefix=1
-    )
+    # Create Flask app with explicit template and static folder paths
+    app = Flask(__name__, 
+                template_folder=os.path.join(basedir, 'templates'),
+                static_folder=os.path.join(basedir, 'static'))
 
     # Load configuration
     if config_class:
@@ -55,7 +50,7 @@ def create_app(config_class=None):
     # Setup security
     setup_security(app)
 
-    # Setup middleware
+    # Setup middleware (includes ProxyFix)
     setup_middleware(app)
 
     # Setup filters
@@ -64,44 +59,6 @@ def create_app(config_class=None):
     # Register blueprints
     register_blueprints(app)
 
-    # Setup request hooks
-    _setup_request_hooks(app)
-
-    # Setup context processors
-    _setup_context_processors(app)
-
     security_logger.info("Flask application created successfully")
 
     return app
-
-def _setup_request_hooks(app):
-    """Setup request hooks for security and monitoring"""
-
-    @app.before_request
-    def before_request_security():
-        # Force HTTPS redirect
-        if os.getenv('FORCE_HTTPS', 'True').lower() == 'true':
-            if not request.is_secure and request.headers.get('X-Forwarded-Proto') != 'https':
-                if request.endpoint not in ['main.health_check']:
-                    return redirect(request.url.replace('http://', 'https://'), code=301)
-
-        # Set CSP nonce
-        g.csp_nonce = secrets.token_urlsafe(16)
-
-        # Log request for monitoring (if sensitive endpoint)
-        from security_config import SecurityConfig, log_security_event
-        if request.endpoint in SecurityConfig.SENSITIVE_ENDPOINTS:
-            log_security_event("SENSITIVE_ENDPOINT_ACCESS", f"Endpoint: {request.endpoint}")
-
-def _setup_context_processors(app):
-    """Setup template context processors"""
-
-    @app.context_processor
-    def inject_security_context():
-        """Inject security context into templates"""
-        return {
-            'nonce': getattr(g, 'csp_nonce', ''),
-            'year': datetime.utcnow().year,
-            'is_secure': request.is_secure,
-            'scheme': request.scheme
-        }

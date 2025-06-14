@@ -1,9 +1,10 @@
 import os
 import threading
+import socket
 from flask import Flask, redirect
 from werkzeug.serving import make_server
-from .ssl_context import create_ssl_context
 from utils.monitoring import security_monitor
+from .ssl_context import create_ssl_context
 
 class DevelopmentServer:
     """Development server with optional HTTPS support"""
@@ -30,6 +31,15 @@ class DevelopmentServer:
         else:
             self._run_http_server(host, http_port, debug)
 
+    def _is_port_available(self, host, port):
+        """Check if a port is available"""
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind((host, port))
+                return True
+        except OSError:
+            return False
+
     def _run_https_server(self, host, ssl_port, http_port, debug, force_https):
         """Run HTTPS development server"""
         try:
@@ -38,7 +48,14 @@ class DevelopmentServer:
 
             # Start HTTP redirect server if FORCE_HTTPS is enabled
             if force_https:
-                self._start_http_redirect_server(host, http_port, ssl_port)
+                if self._is_port_available(host, http_port):
+                    self._start_http_redirect_server(host, http_port, ssl_port)
+                else:
+                    self.security_logger.warning(
+                        "HTTP port %s is already in use. HTTP redirect server will not start. "
+                        "Set HTTP_PORT to a different port or disable FORCE_HTTPS in development.",
+                        http_port
+                    )
 
             self.app.run(
                 host=host,
@@ -51,9 +68,9 @@ class DevelopmentServer:
             self.security_logger.error("SSL certificates not found: %s", e)
             self.security_logger.info("Please generate certificates or set DEV_HTTPS=False")
             self.security_logger.info(
-                "To generate certificates: mkdir -p certs/entity && "
-                "openssl req -x509 -newkey rsa:2048 -keyout certs/entity/entity.key "
-                "-out certs/entity/entity.crt -days 365 -nodes -subj '/CN=localhost'"
+                "To generate certificates: mkdir -p certs/development && "
+                "openssl req -x509 -newkey rsa:2048 -keyout certs/development/dev.key "
+                "-out certs/development/dev.crt -days 365 -nodes -subj '/CN=localhost'"
             )
             raise
         except Exception as e:
@@ -62,6 +79,17 @@ class DevelopmentServer:
 
     def _run_http_server(self, host, http_port, debug):
         """Run HTTP development server"""
+        if not self._is_port_available(host, http_port):
+            self.security_logger.error("Port %s is already in use. Please use a different port.", http_port)
+            # Try to find an available port
+            for port in range(http_port + 1, http_port + 100):
+                if self._is_port_available(host, port):
+                    self.security_logger.info("Using available port %s instead", port)
+                    http_port = port
+                    break
+            else:
+                raise OSError(f"No available ports found near {http_port}")
+
         self.security_logger.info("Starting development HTTP server on %s:%s", host, http_port)
         self.app.run(
             host=host,

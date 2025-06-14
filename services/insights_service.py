@@ -33,7 +33,7 @@ def load_stop_words():
             'job', 'position', 'role', 'opportunity', 'vacancy'
         }
 
-def get_stats_overview():
+def get_insights_overview():
     """Get overview statistics: total jobs, organizations, average jobs per org"""
     try:
         # Get total job count
@@ -79,7 +79,7 @@ def get_stats_overview():
         }
 
     except Exception as e:
-        print(f"Error in get_stats_overview: {e}")
+        print(f"Error in get_insights_overview: {e}")
         return {
             "total_jobs": 0,
             "total_organizations": 0,
@@ -256,7 +256,7 @@ def get_word_cloud_data(limit=50, search_term=""):
         print(f"Exception in get_word_cloud_data: {e}")
         return {"words": []}
 
-def get_organizations_stats():
+def get_organizations_insights():
     """Get organizations with job counts and last update dates"""
     try:
         query = {
@@ -321,5 +321,5 @@ def get_organizations_stats():
             return {"organizations": []}
 
     except Exception as e:
-        print(f"Error in get_organizations_stats: {e}")
+        print(f"Error in get_organizations_insights: {e}")
         return {"organizations": []}
