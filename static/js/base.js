@@ -98,19 +98,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const toggleButton = document.getElementById('toggle-filters');
     const toggleText = document.getElementById('toggle-filters-text');
 
-    if (!filtersContainer || !toggleButton || !toggleText) return;
+    if (!filtersContainer || !toggleButton || !toggleText) {
+        console.log('Filter elements not found:', {
+            filtersContainer: !!filtersContainer,
+            toggleButton: !!toggleButton,
+            toggleText: !!toggleText
+        });
+        return;
+    }
 
     filtersVisible = !filtersVisible;
+    console.log('Toggling filters. New state:', filtersVisible);
 
     if (filtersVisible) {
       // Show filters
       filtersContainer.classList.remove('hidden');
-      filtersContainer.classList.add('visible');
+      filtersContainer.classList.add('show'); // Use Bootstrap's show class
       toggleButton.classList.add('active');
       toggleText.textContent = 'Hide Filters';
     } else {
       // Hide filters
-      filtersContainer.classList.remove('visible');
+      filtersContainer.classList.remove('show');
       filtersContainer.classList.add('hidden');
       toggleButton.classList.remove('active');
       toggleText.textContent = 'Show Filters';
@@ -121,12 +129,14 @@ document.addEventListener('DOMContentLoaded', () => {
   function initializeFiltersState() {
     const filtersContainer = document.getElementById('filters');
     const toggleButton = document.getElementById('toggle-filters');
+    const toggleText = document.getElementById('toggle-filters-text');
 
     if (filtersContainer && toggleButton) {
       // On page load, filters should be hidden
       filtersContainer.classList.add('hidden');
-      filtersContainer.classList.remove('visible');
-      toggleButton.classList.remove('active');
+      filtersContainer.classList.remove('show');
+      if (toggleButton) toggleButton.classList.remove('active');
+      if (toggleText) toggleText.textContent = 'Show Filters';
       filtersVisible = false;
     }
   }
@@ -399,10 +409,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const targetTab = activeTab.getAttribute('data-bs-target');
       const searchParams = getCurrentSearchParams();
       
-      if (targetTab === '#organizations' && typeof loadOrganizations === 'function') {
-        loadOrganizations(searchParams);
-      } else if (targetTab === '#insights' && typeof loadInsights === 'function') {
-        loadInsights(searchParams);
+      if (targetTab === '#organizations' && typeof window.loadOrganizations === 'function') {
+        window.loadOrganizations(searchParams);
+      } else if (targetTab === '#insights' && typeof window.loadInsights === 'function') {
+        window.loadInsights(searchParams);
       }
     }
   }
@@ -419,8 +429,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (value) params.append(key, value);
     }
     
+    console.log('Current search params:', params.toString());
     return params.toString();
   }
+
+  // Make functions globally available
+  window.getCurrentSearchParams = getCurrentSearchParams;
+  window.toggleFilters = toggleFilters;
 
   // Handle Load More functionality
   document.getElementById('load-more')?.addEventListener('click', async function () {
@@ -530,16 +545,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // NEW: Handle Toggle Filters button
+  // Handle Toggle Filters button - FIXED
   const toggleFiltersButton = document.getElementById('toggle-filters');
   if (toggleFiltersButton) {
+    console.log('Toggle filters button found, adding event listener');
     toggleFiltersButton.addEventListener('click', function(e) {
       e.preventDefault();
+      e.stopPropagation();
+      console.log('Toggle filters button clicked');
       toggleFilters();
     });
+  } else {
+    console.log('Toggle filters button NOT found');
   }
 
-  // NEW: Handle Update Filters button
+  // Handle Update Filters button
   const updateButton = document.getElementById('update-filters');
   if (updateButton) {
     updateButton.addEventListener('click', function(e) {
@@ -571,7 +591,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // NEW: Also handle form submission from the filters form itself (if needed)
+  // Handle form submission from the filters form itself (if needed)
   const filtersForm = document.getElementById('filters-form');
   if (filtersForm) {
     filtersForm.addEventListener('submit', function(e) {
