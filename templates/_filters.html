@@ -1,5 +1,5 @@
 <div id="accordion" class="filters-container">
-  <form method="get" action="/search" class="filters-form" id="filters-form">
+  <form method="get" action="/search" class="search-form" id="search-form">
     <!-- Always-visible search bar section -->
     <div class="search-section">
       <div class="search-bar with-toggle">
@@ -74,7 +74,7 @@
                   Showing jobs posted in the last {{ date_posted_days or 30 }} days
                   </span>
                   <div class="slider-wrapper">
-                    <input type="range" id="date-slider" name="date_posted_days" min="0" max="30" value="{{ date_posted_days or 30 }}" class="date-slider">
+                    <input type="range" id="date-slider" name="date_posted_days" min="0" max="31" value="{{ date_posted_days or 31 }}" class="date-slider">
                     <div class="slider-labels">
                       <span>Today</span>
                       <span>All time</span>

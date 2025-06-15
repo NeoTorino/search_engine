@@ -40,40 +40,24 @@ document.addEventListener('DOMContentLoaded', () => {
         input = input.replace(pattern, '');
     });
 
+    // Check for suspicious patterns
+    const suspiciousPatterns = [
+        /union\s+select/gi,
+        /drop\s+table/gi,
+        /delete\s+from/gi,
+        /insert\s+into/gi,
+        /exec\s*\(/gi
+    ];
+
+    suspiciousPatterns.forEach(pattern => {
+        input = input.replace(pattern, '');
+    });
+
+
     // Normalize whitespace
     input = input.replace(/\s+/g, ' ').trim();
 
     return input;
-  }
-
-  function validateSearchInput(input) {
-    const cleaned = sanitizeInput(input);
-
-    // Additional validation
-    if (cleaned.length > 200) {
-        return { valid: false, message: "Search query too long", value: "" };
-    }
-
-    if (cleaned.length < 1) {
-        return { valid: true, message: "", value: cleaned };
-    }
-
-    // Check for suspicious patterns
-    const suspiciousPatterns = [
-        /union\s+select/i,
-        /drop\s+table/i,
-        /delete\s+from/i,
-        /insert\s+into/i,
-        /exec\s*\(/i
-    ];
-
-    for (const pattern of suspiciousPatterns) {
-        if (pattern.test(cleaned)) {
-            return { valid: false, message: "Invalid search query", value: "" };
-        }
-    }
-
-    return { valid: true, message: "", value: cleaned };
   }
 
   function getCSRFToken() {
@@ -150,10 +134,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Handle empty query display
       if (!query || query.trim() === '') {
-        resultsCountElement.innerHTML = `About ${formattedCount} result${plural} (showing all jobs)`;
+        message = `Showing all jobs`;
       } else {
-        resultsCountElement.innerHTML = `About ${formattedCount} result${plural} for "<strong>${query}</strong>"`;
+        if(totalResults >= 10000){
+          message = `Showing all jobs`;
+        }else{
+          message = `Found ${formattedCount} result${plural} for "<strong>${query}</strong>"`;
+        }
       }
+      resultsCountElement.innerHTML = message;
     }
   }
 
@@ -302,6 +291,32 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // When filters are updated/search is performed
+  function handleFilterUpdate() {
+    // Call this function whenever:
+    // 1. Search form is submitted
+    // 2. Filters are changed
+    // 3. Any search parameters are updated
+    // Clear the tab loading cache so fresh data is loaded
+    if (typeof window.clearTabCache === 'function') {
+        window.clearTabCache();
+    }
+    
+    // Reset insights loading state
+    if (typeof window.resetInsightsLoadingState === 'function') {
+        window.resetInsightsLoadingState();
+    }
+    
+    // If currently on insights tab, reload the data
+    const activeTab = document.querySelector('#mainTabs .nav-link.active');
+    if (activeTab && activeTab.getAttribute('data-bs-target') === '#insights') {
+        const searchParams = getCurrentSearchParams();
+        if (typeof window.loadInsights === 'function') {
+            window.loadInsights(searchParams);
+        }
+    }
+  }
+
   // Function to handle "Reset Filters" functionality
   window.resetFilters = function() {
     // Keep the current search query
@@ -323,11 +338,11 @@ document.addEventListener('DOMContentLoaded', () => {
     currentQuery = sanitizeInput(currentSearchQuery);
 
     // Get the form and create parameters with current query but reset filters
-    const form = document.getElementById('filters-form') || document.querySelector('form');
+    const form = document.getElementById('search-form') || document.querySelector('form');
     if (form) {
       const formData = new FormData(form);
       formData.set('q', currentQuery); // Keep the search query
-      formData.set('date_posted_days', '30'); // Reset to default
+      formData.set('date_posted_days', '31'); // Reset to default
       // Remove all country, organization, and source filters
       formData.delete('country');
       formData.delete('organization');
@@ -337,6 +352,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     refreshActiveTab();
+    handleFilterUpdate();
   };
 
   window.fetchFilteredResults = function(queryParams) {
@@ -386,7 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const percent = (val / max) * 100;
 
       // Update label
-      label.textContent = val === 30
+      label.textContent = val === 31
       ? "Showing all jobs"
       : `Showing jobs posted today${val === 0 ? '' : ` and past ${val} day${val > 1 ? 's' : ''}`}`;
 
@@ -400,6 +416,18 @@ document.addEventListener('DOMContentLoaded', () => {
       updateLabelAndColor(e.target.value);
     });
 
+    // Added change event for when user finishes sliding
+    slider.addEventListener('change', (e) => {
+      // Auto-update when slider value changes
+      const form = document.getElementById('search-form');
+      if (form) {
+        const formData = new FormData(form);
+        formData.set('date_posted_days', e.target.value);
+        const params = new URLSearchParams(formData);
+        fetchFilteredResults(params.toString());
+        handleFilterUpdate();
+      }
+    });
   }
 
   // Function to refresh the active tab when filters change
@@ -419,7 +447,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Helper function to get current search parameters (make it available globally)
   function getCurrentSearchParams() {
-    const form = document.getElementById('filters-form');
+    const form = document.getElementById('search-form');
     if (!form) return '';
     
     const formData = new FormData(form);
@@ -437,6 +465,42 @@ document.addEventListener('DOMContentLoaded', () => {
   window.getCurrentSearchParams = getCurrentSearchParams;
   window.toggleFilters = toggleFilters;
 
+  // Added Bootstrap Select change event listeners
+  $(document).ready(function() {
+    // Country select change
+    $('#country-select').on('changed.bs.select', function(e) {
+      const form = document.getElementById('search-form');
+      if (form) {
+        const formData = new FormData(form);
+        const params = new URLSearchParams(formData);
+        fetchFilteredResults(params.toString());
+        handleFilterUpdate();
+      }
+    });
+
+    // Organization select change
+    $('#organization-select').on('changed.bs.select', function(e) {
+      const form = document.getElementById('search-form');
+      if (form) {
+        const formData = new FormData(form);
+        const params = new URLSearchParams(formData);
+        fetchFilteredResults(params.toString());
+        handleFilterUpdate();
+      }
+    });
+
+    // Source select change
+    $('#source-select').on('changed.bs.select', function(e) {
+      const form = document.getElementById('search-form');
+      if (form) {
+        const formData = new FormData(form);
+        const params = new URLSearchParams(formData);
+        fetchFilteredResults(params.toString());
+        handleFilterUpdate();
+      }
+    });
+  });
+
   // Handle Load More functionality
   document.getElementById('load-more')?.addEventListener('click', async function () {
     const btn = this;
@@ -447,7 +511,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.textContent = 'Loading...';
 
     // Use the same method as filter functions to get all form data
-    const form = document.getElementById('filters-form');
+    const form = document.getElementById('search-form');
     const formData = new FormData(form);
 
     // Override the offset for load more
@@ -502,10 +566,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Handle navbar form submission (Search button)
-  const navbarForm = document.querySelector('.navbar-search-form');
-  if (navbarForm) {
-    navbarForm.addEventListener('submit', (e) => {
+  // Handle search form submission (Search button)
+  const searchForm = document.querySelector('.search-form');
+  if (searchForm) {
+    searchForm.addEventListener('submit', (e) => {
       e.preventDefault(); // Prevent default form submission
 
       const input = document.getElementById('search-input');
@@ -542,10 +606,11 @@ document.addEventListener('DOMContentLoaded', () => {
       fetchFilteredResults(params.toString());
 
       refreshActiveTab();
+      handleFilterUpdate();
     });
   }
 
-  // Handle Toggle Filters button - FIXED
+  // Handle Toggle Filters button
   const toggleFiltersButton = document.getElementById('toggle-filters');
   if (toggleFiltersButton) {
     console.log('Toggle filters button found, adding event listener');
@@ -572,13 +637,15 @@ document.addEventListener('DOMContentLoaded', () => {
       currentQuery = query;
 
       // Get the form and create parameters with all current filter values
-      const form = document.getElementById('filters-form');
+      const form = document.getElementById('search-form');
       if (form) {
         const formData = new FormData(form);
         formData.set('q', currentQuery); // Ensure sanitized query is sent
         const params = new URLSearchParams(formData);
         fetchFilteredResults(params.toString());
       }
+
+      handleFilterUpdate();
     });
   }
 
@@ -592,7 +659,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Handle form submission from the filters form itself (if needed)
-  const filtersForm = document.getElementById('filters-form');
+  const filtersForm = document.getElementById('search-form');
   if (filtersForm) {
     filtersForm.addEventListener('submit', function(e) {
       e.preventDefault(); // Prevent default form submission
@@ -600,6 +667,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // Check if this is a search submission (search button clicked)
       const searchButton = document.getElementById('search-btn');
       const activeElement = document.activeElement;
+
+      handleFilterUpdate(); // ORIGINAL: Already had this
 
       if (activeElement === searchButton || e.submitter === searchButton) {
         // This is a search - reset all filters
@@ -627,7 +696,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Create clean search with reset filters
         const params = new URLSearchParams();
         params.set('q', currentQuery);
-        params.set('date_posted_days', '30'); // Reset to default
+        params.set('date_posted_days', '31'); // Reset to default
         fetchFilteredResults(params.toString());
       } else {
         // This is a regular filter update

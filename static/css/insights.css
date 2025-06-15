@@ -39,6 +39,8 @@
 }
 
 /* Chart Containers */
+
+/* Chart Containers - Fixed overflow issue */
 .chart-container {
     background: white;
     border-radius: 15px;
@@ -46,33 +48,182 @@
     box-shadow: 0 10px 30px rgba(0,0,0,0.1);
     margin-bottom: 2rem;
     position: relative;
+    /* Remove overflow: hidden to prevent x-axis clipping */
+    /* overflow: hidden; */
+}
+
+/* Specific styling for chart canvas containers */
+.chart-container > div {
+    /* Add extra padding at bottom for rotated x-axis labels */
+    padding-bottom: 2rem;
+    /* Ensure the canvas container can expand for labels */
+    overflow: visible;
+}
+
+/* Canvas specific adjustments */
+.chart-container canvas {
+    /* Ensure canvas doesn't get clipped */
+    overflow: visible;
+}
+
+/* Alternative: If you need to keep overflow hidden for other elements,
+   create a specific class for chart containers with axes */
+.chart-container.with-axes {
+    overflow: visible;
+    /* Add extra bottom padding for rotated labels */
+    padding-bottom: 3rem;
+}
+
+/* For mobile responsiveness - ensure labels don't get cut off */
+@media (max-width: 768px) {
+    .chart-container {
+        padding-bottom: 2.5rem;
+    }
+    
+    .chart-container > div {
+        padding-bottom: 2.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .chart-container {
+        padding-bottom: 3rem;
+    }
+    
+    .chart-container > div {
+        padding-bottom: 3rem;
+    }
+}
+
+/* Specific styling for countries chart to prevent uncontrolled growth */
+.chart-container:has(#countriesChart) {
+    max-height: 600px;
     overflow: hidden;
 }
 
-.chart-container h3 {
-    color: #2d3748;
-    font-weight: 700;
-    text-align: center;
-    margin-bottom: 2rem;
-    font-size: 1.75rem;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    position: relative;
-    z-index: 3;
-    background-color: var(--blue);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
+.chart-container canvas#countriesChart {
+    max-height: 400px !important;
+    max-width: 100% !important;
+    width: auto !important;
+    height: auto !important;
 }
 
-/* Word Cloud Specific Container */
-.chart-container:has(#canvas),
-.chart-container:has(.html-word-cloud),
-.chart-container:has(.simple-word-list),
-.chart-container:has(.loading-overlay) {
-    background-color: #ffffff;
-    border: 1px solid rgba(102, 126, 234, 0.1);
-    min-height: 630px;
-    box-shadow: 0 15px 40px rgba(102, 126, 234, 0.15);
+/* Container for countries chart with fixed dimensions */
+.chart-container #countriesChart {
+    position: relative;
+}
+
+.chart-container .countries-chart-wrapper {
+    position: relative;
+    height: 400px;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Responsive adjustments for countries chart */
+@media (max-width: 768px) {
+    .chart-container:has(#countriesChart) {
+        max-height: 500px;
+    }
+    
+    .chart-container canvas#countriesChart {
+        max-height: 350px !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .chart-container:has(#countriesChart) {
+        max-height: 450px;
+    }
+    
+    .chart-container canvas#countriesChart {
+        max-height: 300px !important;
+    }
+}
+
+/* Specific styling for chart canvas containers */
+.chart-container > div {
+    /* Reduced padding to match countries chart height */
+    padding-bottom: 0.5rem;
+    /* Ensure the canvas container can expand for labels */
+    overflow: visible;
+}
+
+/* Specific styling for countries chart in col-lg-4 */
+.col-lg-4 .chart-container:has(#countriesChart),
+.chart-container:has(#countriesChart) {
+    min-height: 500px; /* Match jobs chart container height */
+    display: flex;
+    flex-direction: column;
+}
+
+.col-lg-4 .chart-container:has(#countriesChart) > div,
+.chart-container:has(#countriesChart) > div {
+    height: 400px !important; /* Same height as jobs chart */
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.col-lg-4 .chart-container canvas#countriesChart,
+.chart-container canvas#countriesChart {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+}
+
+/* Ensure both chart containers have the same total height */
+.col-lg-8 .chart-container,
+.col-lg-4 .chart-container {
+    min-height: 500px;
+}
+
+/* Make sure the inner chart areas are the same height */
+.col-lg-8 .chart-container > div,
+.col-lg-4 .chart-container > div {
+    height: 400px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 991px) {
+    /* When columns stack on smaller screens */
+    .col-lg-8 .chart-container,
+    .col-lg-4 .chart-container {
+        min-height: 450px;
+    }
+    
+    .col-lg-8 .chart-container > div,
+    .col-lg-4 .chart-container > div {
+        height: 350px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .col-lg-8 .chart-container,
+    .col-lg-4 .chart-container {
+        min-height: 400px;
+    }
+    
+    .col-lg-8 .chart-container > div,
+    .col-lg-4 .chart-container > div {
+        height: 300px !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .col-lg-8 .chart-container,
+    .col-lg-4 .chart-container {
+        min-height: 350px;
+    }
+    
+    .col-lg-8 .chart-container > div,
+    .col-lg-4 .chart-container > div {
+        height: 250px !important;
+    }
 }
 
 /* Search Input */

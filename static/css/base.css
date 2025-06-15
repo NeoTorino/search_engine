@@ -105,11 +105,11 @@ form button.btn-lg {
 }
 
 /* Navbar search form adjustments */
-#navbar-search-form input.form-control {
+#search-form input.form-control {
   width: 250px;
 }
 
-#navbar-search-form button {
+#search-form button {
   white-space: nowrap;
 }
 

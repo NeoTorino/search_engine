@@ -178,313 +178,351 @@ def load_stop_words():
         }
 
 
-def get_insights_overview(search_params=None):
-    """Get overview statistics with comprehensive validation"""
+def get_combined_insights(search_params=None):
+    """Get all insights data in a single response with comprehensive validation and security"""
     try:
         query, selected_countries, selected_organizations, selected_sources, date_range = process_search_params(search_params)
         
-        # Build the base query for filtering
+        # Build the base query for filtering - this will be used for ALL insights
         base_query = build_filtered_query(query, selected_countries, selected_organizations, selected_sources, date_range)
         
-        # Get total job count with filters
-        count_payload = {"query": base_query} if base_query != {"match_all": {}} else {}
+        # Initialize response structure
+        insights_data = {
+            "overview": {
+                "total_jobs": 0,
+                "total_organizations": 0,
+                "avg_jobs_per_org": 0
+            },
+            "jobs_per_day": {
+                "dates": [],
+                "counts": []
+            },
+            "top_countries": {
+                "countries": [],
+                "counts": []
+            },
+            "word_cloud": {
+                "words": []
+            }
+        }
         
-        total_jobs_response = requests.get(
-            f"{OPENSEARCH_URL}/{INDEX_NAME}/_count",
-            auth=AUTH,
-            json=count_payload,
-            verify=False,
-            timeout=10
-        )
+        # 1. GET OVERVIEW STATISTICS
+        try:
+            count_payload = {"query": base_query} if base_query != {"match_all": {}} else {}
+            
+            total_jobs_response = requests.get(
+                f"{OPENSEARCH_URL}/{INDEX_NAME}/_count",
+                auth=AUTH,
+                json=count_payload,
+                verify=False,
+                timeout=10
+            )
 
-        total_jobs = 0
-        if total_jobs_response.status_code == 200:
-            total_jobs = total_jobs_response.json().get("count", 0)
-        else:
-            log_security_event("OPENSEARCH_ERROR", f"Count query failed: {total_jobs_response.status_code}")
+            total_jobs = 0
+            if total_jobs_response.status_code == 200:
+                total_jobs = total_jobs_response.json().get("count", 0)
+            else:
+                log_security_event("OPENSEARCH_ERROR", f"Count query failed: {total_jobs_response.status_code}")
 
-        # Get unique organization count with the same filters
-        org_query = {
-            "size": 0,
-            "query": base_query,
-            "aggs": {
-                "unique_organizations": {
-                    "cardinality": {"field": "organization"}
+            # Get unique organization count with the same filters
+            org_query = {
+                "size": 0,
+                "query": base_query,
+                "aggs": {
+                    "unique_organizations": {
+                        "cardinality": {"field": "organization"}
+                    }
                 }
+            }
+
+            org_response = requests.get(
+                f"{OPENSEARCH_URL}/{INDEX_NAME}/_search",
+                auth=AUTH,
+                json=org_query,
+                verify=False,
+                timeout=10
+            )
+
+            total_organizations = 0
+            if org_response.status_code == 200:
+                total_organizations = org_response.json().get("aggregations", {}).get("unique_organizations", {}).get("value", 0)
+            else:
+                log_security_event("OPENSEARCH_ERROR", f"Org aggregation failed: {org_response.status_code}")
+
+            avg_jobs_per_org = round(total_jobs / total_organizations, 2) if total_organizations > 0 else 0
+
+            insights_data["overview"] = {
+                "total_jobs": int(total_jobs),
+                "total_organizations": int(total_organizations),
+                "avg_jobs_per_org": float(avg_jobs_per_org)
+            }
+            
+        except Exception as overview_error:
+            log_security_event("OVERVIEW_INSIGHTS_ERROR", f"Error: {overview_error}")
+        
+        # 2. GET JOBS PER DAY
+        try:
+            # Default to 365 days if no date range specified
+            days = 365
+            if date_range:
+                # Extract days from date range if possible
+                try:
+                    start_date = datetime.fromisoformat(date_range['gte'].replace('Z', '+00:00'))
+                    end_date = datetime.fromisoformat(date_range['lte'].replace('Z', '+00:00'))
+                    days = min((end_date - start_date).days + 1, 365)  # Cap at 365 days
+                except Exception:
+                    days = 365
+
+            # Calculate date range for aggregation
+            end_date = datetime.utcnow().replace(hour=23, minute=59, second=59, microsecond=999999)
+            start_date = end_date - timedelta(days=days-1)
+
+            query_payload = {
+                "size": 0,
+                "query": {
+                    "bool": {
+                        "must": [base_query],
+                        "filter": [{
+                            "range": {
+                                "date_posted": {
+                                    "gte": start_date.isoformat(),
+                                    "lte": end_date.isoformat()
+                                }
+                            }
+                        }]
+                    }
+                },
+                "aggs": {
+                    "jobs_per_day": {
+                        "date_histogram": {
+                            "field": "date_posted",
+                            "calendar_interval": "day",
+                            "format": "yyyy-MM-dd",
+                            "order": {"_key": "asc"}
+                        }
+                    }
+                }
+            }
+
+            response = requests.get(
+                f"{OPENSEARCH_URL}/{INDEX_NAME}/_search",
+                auth=AUTH,
+                json=query_payload,
+                verify=False,
+                timeout=15
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                buckets = data.get("aggregations", {}).get("jobs_per_day", {}).get("buckets", [])
+
+                dates = []
+                counts = []
+
+                for bucket in buckets:
+                    try:
+                        date_str = bucket["key_as_string"]
+                        count = int(bucket["doc_count"])
+                        formatted_date = datetime.strptime(date_str, "%Y-%m-%d").strftime("%m/%d")
+                        dates.append(formatted_date)
+                        counts.append(count)
+                    except (ValueError, KeyError) as e:
+                        log_security_event("DATE_PARSING_ERROR", f"Error parsing date: {e}")
+                        continue
+
+                insights_data["jobs_per_day"] = {
+                    "dates": dates,
+                    "counts": counts
+                }
+            else:
+                log_security_event("OPENSEARCH_ERROR", f"Jobs per day query failed: {response.status_code}")
+                
+        except Exception as jobs_per_day_error:
+            log_security_event("JOBS_PER_DAY_ERROR", f"Error: {jobs_per_day_error}")
+        
+        # 3. GET TOP COUNTRIES
+        try:
+            limit = 8  # Fixed limit for countries
+            
+            query_payload = {
+                "size": 0,
+                "query": base_query,
+                "aggs": {
+                    "top_countries": {
+                        "terms": {
+                            "field": "country",
+                            "size": limit,
+                            "order": {"_count": "desc"}
+                        }
+                    }
+                }
+            }
+
+            response = requests.get(
+                f"{OPENSEARCH_URL}/{INDEX_NAME}/_search",
+                auth=AUTH,
+                json=query_payload,
+                verify=False,
+                timeout=10
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                buckets = data.get("aggregations", {}).get("top_countries", {}).get("buckets", [])
+
+                countries = []
+                counts = []
+
+                for bucket in buckets:
+                    try:
+                        country = sanitize_input(bucket["key"], max_length=50)
+                        count = int(bucket["doc_count"])
+                        if country and count > 0:
+                            countries.append(country.title())
+                            counts.append(count)
+                    except (ValueError, KeyError) as e:
+                        log_security_event("COUNTRY_PARSING_ERROR", f"Error parsing country: {e}")
+                        continue
+
+                insights_data["top_countries"] = {
+                    "countries": countries,
+                    "counts": counts
+                }
+            else:
+                log_security_event("OPENSEARCH_ERROR", f"Top countries query failed: {response.status_code}")
+                
+        except Exception as countries_error:
+            log_security_event("TOP_COUNTRIES_ERROR", f"Error: {countries_error}")
+        
+        # 4. GET WORD CLOUD DATA
+        try:
+            limit = 50  # Fixed limit for word cloud
+            stop_words = load_stop_words()
+
+            # Limit the number of documents to process (prevent resource exhaustion)
+            query_payload = {
+                "size": min(5000, 10000),  # Reduced from 10000 for safety
+                "_source": ["title", "description"],
+                "query": base_query
+            }
+
+            response = requests.get(
+                f"{OPENSEARCH_URL}/{INDEX_NAME}/_search",
+                auth=AUTH,
+                json=query_payload,
+                verify=False,
+                timeout=30
+            )
+
+            if response.status_code == 200:
+                hits = response.json().get("hits", {}).get("hits", [])
+                
+                # Process text with security considerations
+                all_words = []
+                max_docs = min(len(hits), 5000)  # Process max 5000 documents
+                
+                for i, hit in enumerate(hits[:max_docs]):
+                    try:
+                        source = hit.get('_source', {})
+                        title = sanitize_input(source.get('title', ''), max_length=200)
+                        description = sanitize_input(source.get('description', ''), max_length=1000)
+                        
+                        text = f"{title} {description}"
+                        
+                        # Clean and tokenize text
+                        # Remove extra whitespace and normalize
+                        text = re.sub(r'\s+', ' ', text.lower().strip())
+                        
+                        # Remove punctuation but keep letters and spaces
+                        cleaned = re.sub(r'[^\w\s]', ' ', text)
+                        
+                        # Split into words
+                        words = cleaned.split()
+                        
+                        for word in words:
+                            # Additional validation for each word
+                            if (len(word) > 2 and 
+                                len(word) < 50 and  # Prevent extremely long words
+                                word not in stop_words and 
+                                word.isalpha() and
+                                not re.search(r'(script|javascript|eval|exec)', word, re.IGNORECASE)):
+                                all_words.append(word)
+                                
+                    except Exception as word_error:
+                        log_security_event("WORD_PROCESSING_ERROR", f"Error processing document {i}: {word_error}")
+                        continue
+
+                # Count words and get most common
+                if all_words:
+                    word_counts = Counter(all_words)
+                    most_common = word_counts.most_common(limit)
+
+                    insights_data["word_cloud"] = {
+                        "words": [
+                            {
+                                "text": sanitize_input(word.title(), max_length=50), 
+                                "count": int(count)
+                            } 
+                            for word, count in most_common 
+                            if word and count > 0
+                        ]
+                    }
+                else:
+                    insights_data["word_cloud"] = {"words": []}
+
+            else:
+                log_security_event("OPENSEARCH_ERROR", f"Word cloud query failed: {response.status_code}")
+                
+        except Exception as word_cloud_error:
+            log_security_event("WORD_CLOUD_ERROR", f"Error: {word_cloud_error}")
+
+        return insights_data
+
+    except Exception as e:
+        log_security_event("COMBINED_INSIGHTS_ERROR", f"Error: {e}")
+        return {
+            "overview": {
+                "total_jobs": 0,
+                "total_organizations": 0,
+                "avg_jobs_per_org": 0
+            },
+            "jobs_per_day": {
+                "dates": [],
+                "counts": []
+            },
+            "top_countries": {
+                "countries": [],
+                "counts": []
+            },
+            "word_cloud": {
+                "words": []
             }
         }
 
-        org_response = requests.get(
-            f"{OPENSEARCH_URL}/{INDEX_NAME}/_search",
-            auth=AUTH,
-            json=org_query,
-            verify=False,
-            timeout=10
-        )
 
-        total_organizations = 0
-        if org_response.status_code == 200:
-            total_organizations = org_response.json().get("aggregations", {}).get("unique_organizations", {}).get("value", 0)
-        else:
-            log_security_event("OPENSEARCH_ERROR", f"Org aggregation failed: {org_response.status_code}")
-
-        avg_jobs_per_org = round(total_jobs / total_organizations, 2) if total_organizations > 0 else 0
-
-        return {
-            "total_jobs": int(total_jobs),
-            "total_organizations": int(total_organizations),
-            "avg_jobs_per_org": float(avg_jobs_per_org)
-        }
-
-    except Exception as e:
-        log_security_event("INSIGHTS_OVERVIEW_ERROR", f"Error: {e}")
-        return {
-            "total_jobs": 0,
-            "total_organizations": 0,
-            "avg_jobs_per_org": 0
-        }
+# Keep individual functions for backward compatibility if needed
+def get_insights_overview(search_params=None):
+    """Get overview statistics with comprehensive validation"""
+    combined_data = get_combined_insights(search_params)
+    return combined_data["overview"]
 
 
 def get_jobs_per_day(search_params=None):
     """Get jobs posted per day with validation"""
-    try:
-        query, selected_countries, selected_organizations, selected_sources, date_range = process_search_params(search_params)
-        
-        # Default to 30 days if no date range specified
-        days = 30
-        if date_range:
-            # Extract days from date range if possible
-            try:
-                start_date = datetime.fromisoformat(date_range['gte'].replace('Z', '+00:00'))
-                end_date = datetime.fromisoformat(date_range['lte'].replace('Z', '+00:00'))
-                days = min((end_date - start_date).days + 1, 365)  # Cap at 365 days
-            except Exception:
-                days = 30
-
-        # Build query with filters
-        base_query = build_filtered_query(query, selected_countries, selected_organizations, selected_sources, date_range)
-        
-        # Calculate date range for aggregation
-        end_date = datetime.utcnow().replace(hour=23, minute=59, second=59, microsecond=999999)
-        start_date = end_date - timedelta(days=days-1)
-
-        query_payload = {
-            "size": 0,
-            "query": {
-                "bool": {
-                    "must": [base_query],
-                    "filter": [{
-                        "range": {
-                            "date_posted": {
-                                "gte": start_date.isoformat(),
-                                "lte": end_date.isoformat()
-                            }
-                        }
-                    }]
-                }
-            },
-            "aggs": {
-                "jobs_per_day": {
-                    "date_histogram": {
-                        "field": "date_posted",
-                        "calendar_interval": "day",
-                        "format": "yyyy-MM-dd",
-                        "order": {"_key": "asc"}
-                    }
-                }
-            }
-        }
-
-        response = requests.get(
-            f"{OPENSEARCH_URL}/{INDEX_NAME}/_search",
-            auth=AUTH,
-            json=query_payload,
-            verify=False,
-            timeout=15
-        )
-
-        if response.status_code == 200:
-            data = response.json()
-            buckets = data.get("aggregations", {}).get("jobs_per_day", {}).get("buckets", [])
-
-            dates = []
-            counts = []
-
-            for bucket in buckets:
-                try:
-                    date_str = bucket["key_as_string"]
-                    count = int(bucket["doc_count"])
-                    formatted_date = datetime.strptime(date_str, "%Y-%m-%d").strftime("%m/%d")
-                    dates.append(formatted_date)
-                    counts.append(count)
-                except (ValueError, KeyError) as e:
-                    log_security_event("DATE_PARSING_ERROR", f"Error parsing date: {e}")
-                    continue
-
-            return {
-                "dates": dates,
-                "counts": counts
-            }
-        else:
-            log_security_event("OPENSEARCH_ERROR", f"Jobs per day query failed: {response.status_code}")
-            return {"dates": [], "counts": []}
-
-    except Exception as e:
-        log_security_event("JOBS_PER_DAY_ERROR", f"Error: {e}")
-        return {"dates": [], "counts": []}
+    combined_data = get_combined_insights(search_params)
+    return combined_data["jobs_per_day"]
 
 
 def get_top_countries(search_params=None, limit=8):
     """Get top countries by job count with validation"""
-    try:
-        # Validate limit parameter
-        limit = min(max(int(limit), 1), 50)  # Between 1 and 50
-        
-        query, selected_countries, selected_organizations, selected_sources, date_range = process_search_params(search_params)
-        base_query = build_filtered_query(query, selected_countries, selected_organizations, selected_sources, date_range)
-        
-        query_payload = {
-            "size": 0,
-            "query": base_query,
-            "aggs": {
-                "top_countries": {
-                    "terms": {
-                        "field": "country",
-                        "size": limit,
-                        "order": {"_count": "desc"}
-                    }
-                }
-            }
-        }
-
-        response = requests.get(
-            f"{OPENSEARCH_URL}/{INDEX_NAME}/_search",
-            auth=AUTH,
-            json=query_payload,
-            verify=False,
-            timeout=10
-        )
-
-        if response.status_code == 200:
-            data = response.json()
-            buckets = data.get("aggregations", {}).get("top_countries", {}).get("buckets", [])
-
-            countries = []
-            counts = []
-
-            for bucket in buckets:
-                try:
-                    country = sanitize_input(bucket["key"], max_length=50)
-                    count = int(bucket["doc_count"])
-                    if country and count > 0:
-                        countries.append(country.title())
-                        counts.append(count)
-                except (ValueError, KeyError) as e:
-                    log_security_event("COUNTRY_PARSING_ERROR", f"Error parsing country: {e}")
-                    continue
-
-            return {
-                "countries": countries,
-                "counts": counts
-            }
-        else:
-            log_security_event("OPENSEARCH_ERROR", f"Top countries query failed: {response.status_code}")
-            return {"countries": [], "counts": []}
-
-    except Exception as e:
-        log_security_event("TOP_COUNTRIES_ERROR", f"Error: {e}")
-        return {"countries": [], "counts": []}
+    combined_data = get_combined_insights(search_params)
+    return combined_data["top_countries"]
 
 
 def get_word_cloud_data(search_params=None, limit=50):
     """Get word frequency data with comprehensive validation"""
-    try:
-        # Validate limit parameter
-        limit = min(max(int(limit), 1), 100)  # Between 1 and 100
-        
-        query, selected_countries, selected_organizations, selected_sources, date_range = process_search_params(search_params)
-        base_query = build_filtered_query(query, selected_countries, selected_organizations, selected_sources, date_range)
-        
-        stop_words = load_stop_words()
-
-        # Limit the number of documents to process (prevent resource exhaustion)
-        query_payload = {
-            "size": min(5000, 10000),  # Reduced from 10000 for safety
-            "_source": ["title", "description"],
-            "query": base_query
-        }
-
-        response = requests.get(
-            f"{OPENSEARCH_URL}/{INDEX_NAME}/_search",
-            auth=AUTH,
-            json=query_payload,
-            verify=False,
-            timeout=30
-        )
-
-        if response.status_code == 200:
-            hits = response.json().get("hits", {}).get("hits", [])
-            
-            # Process text with security considerations
-            all_words = []
-            max_docs = min(len(hits), 5000)  # Process max 5000 documents
-            
-            for i, hit in enumerate(hits[:max_docs]):
-                try:
-                    source = hit.get('_source', {})
-                    title = sanitize_input(source.get('title', ''), max_length=200)
-                    description = sanitize_input(source.get('description', ''), max_length=1000)
-                    
-                    text = f"{title} {description}"
-                    
-                    # Clean and tokenize text
-                    # Remove extra whitespace and normalize
-                    text = re.sub(r'\s+', ' ', text.lower().strip())
-                    
-                    # Remove punctuation but keep letters and spaces
-                    cleaned = re.sub(r'[^\w\s]', ' ', text)
-                    
-                    # Split into words
-                    words = cleaned.split()
-                    
-                    for word in words:
-                        # Additional validation for each word
-                        if (len(word) > 2 and 
-                            len(word) < 50 and  # Prevent extremely long words
-                            word not in stop_words and 
-                            word.isalpha() and
-                            not re.search(r'(script|javascript|eval|exec)', word, re.IGNORECASE)):
-                            all_words.append(word)
-                            
-                except Exception as word_error:
-                    log_security_event("WORD_PROCESSING_ERROR", f"Error processing document {i}: {word_error}")
-                    continue
-
-            # Count words and get most common
-            if all_words:
-                word_counts = Counter(all_words)
-                most_common = word_counts.most_common(limit)
-
-                return {
-                    "words": [
-                        {
-                            "text": sanitize_input(word.title(), max_length=50), 
-                            "count": int(count)
-                        } 
-                        for word, count in most_common 
-                        if word and count > 0
-                    ]
-                }
-            else:
-                return {"words": []}
-
-        else:
-            log_security_event("OPENSEARCH_ERROR", f"Word cloud query failed: {response.status_code}")
-            return {"words": []}
-
-    except Exception as e:
-        log_security_event("WORD_CLOUD_ERROR", f"Error: {e}")
-        return {"words": []}
+    combined_data = get_combined_insights(search_params)
+    return combined_data["word_cloud"]
 
 
 def get_organizations_insights(search_params=None):

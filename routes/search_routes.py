@@ -47,11 +47,11 @@ def search_results():
 
     # Validate date range
     try:
-        days = int(request.args.get('date_posted_days', 30))
+        days = int(request.args.get('date_posted_days', 365))
         if days < 0 or days > 365:  # Reasonable limits
-            days = 30
+            days = 365
     except (ValueError, TypeError):
-        days = 30
+        days = 365
 
     # Validate offset
     try:
@@ -61,7 +61,7 @@ def search_results():
     except (ValueError, TypeError):
         offset = 0
 
-    date_range = None if days >= 30 else get_date_range_days(days)
+    date_range = None if days >= 31 else get_date_range_days(days)
 
     results, total_results, country_counts, organization_counts, source_counts, show_load_more = search_jobs(
         query, selected_countries, selected_organizations, selected_sources, date_range, offset
