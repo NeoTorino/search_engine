@@ -665,12 +665,12 @@ function createHTMLWordCloud(words) {
         const rotations = [0, -15, -10, -5, 5, 10, 15];
         const rotation = rotations[Math.floor(Math.random() * rotations.length)];
 
-        return `<span class="word-cloud-word" 
-                      style="font-size: ${fontSize}px; 
-                             color: ${color}; 
+        return `<span class="word-cloud-word"
+                      style="font-size: ${fontSize}px;
+                             color: ${color};
                              font-weight: ${ratio > 0.7 ? 'bold' : ratio > 0.4 ? '600' : 'normal'};
                              transform: rotate(${rotation}deg);
-                             opacity: ${0.8 + ratio * 0.2};" 
+                             opacity: ${0.8 + ratio * 0.2};"
                       title="${word.text}: ${word.count} mentions"
                       data-count="${word.count}">
                     ${word.text}
@@ -694,25 +694,4 @@ function createHTMLWordCloud(words) {
             this.style.transform = this.style.transform.replace(' scale(1.1)', '');
         });
     });
-}
-
-// Legacy functions for backward compatibility (if needed elsewhere in the codebase)
-async function loadOverviewInsights(searchParams = '') {
-    console.warn('loadOverviewInsights is deprecated. Use loadInsights() instead.');
-    return loadInsights(searchParams);
-}
-
-async function loadJobsPerDay(searchParams = '') {
-    console.warn('loadJobsPerDay is deprecated. Use loadInsights() instead.');
-    return loadInsights(searchParams);
-}
-
-async function loadTopCountries(searchParams = '') {
-    console.warn('loadTopCountries is deprecated. Use loadInsights() instead.');
-    return loadInsights(searchParams);
-}
-
-async function loadWordCloud(searchParams = '') {
-    console.warn('loadWordCloud is deprecated. Use loadInsights() instead.');
-    return loadInsights(searchParams);
 }

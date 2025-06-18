@@ -57,7 +57,14 @@ def search_jobs(query, selected_countries=None, selected_organizations=None, sel
         if selected_sources:
             payload["query"]["bool"]["filter"].append({"terms": {"source": selected_sources}})
         if date_range:
-            payload["query"]["bool"]["filter"].append({"range": {"date_posted": date_range}})
+            payload["query"]["bool"]["filter"].append({
+                "range": {
+                    "date_posted": {
+                        "gte": date_range['start'].isoformat() if isinstance(date_range['start'], datetime) else date_range['start'],
+                        "lte": date_range['end'].isoformat() if isinstance(date_range['end'], datetime) else date_range['end']
+                    }
+                }
+            })
 
         # If we only have filters but no text query, add match_all to must clause
         if not has_text_query:

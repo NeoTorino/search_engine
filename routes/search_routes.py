@@ -13,7 +13,7 @@ from security.middleware.decorators import (
 )
 from security.monitoring import log_security_event
 
-api = Blueprint('api', __name__)
+search = Blueprint('search', __name__)
 security_logger = logging.getLogger('security')
 
 # Define validation config for your search endpoints
@@ -92,14 +92,14 @@ def secure_get_search_params(max_countries=10, max_organizations=10, max_sources
         'date_posted_days': date_posted_days
     }
 
-@api.route("/insights")
+@search.route("/insights")
 @secure_endpoint(
     validation_config=SEARCH_VALIDATION_CONFIG,
     auto_sanitize=True,
     block_on_threat=True,
     log_threats=True
 )
-def api_insights():
+def search_insights():
     """Get all insights data in a single response: overview, jobs per day, top countries, and word cloud"""
     try:
         # Check if request passed security validation
@@ -139,14 +139,14 @@ def api_insights():
         log_security_event("INSIGHTS_ERROR", f"Combined insights error: {e}")
         return jsonify({"error": "Failed to load insights data"}), 500
 
-@api.route("/organizations")
+@search.route("/organizations")
 @secure_endpoint(
     validation_config=SEARCH_VALIDATION_CONFIG,
     auto_sanitize=True,
     block_on_threat=True,
     log_threats=True
 )
-def api_organizations():
+def search_organizations():
     """Get organizations with job counts and last update dates"""
     try:
         # Check if request passed security validation
@@ -174,14 +174,14 @@ def api_organizations():
         log_security_event("INSIGHTS_ERROR", f"Organizations insights error: {e}")
         return jsonify({"error": "Failed to load organizations data"}), 500
 
-@api.route("/search")
+@search.route("/search")
 @secure_endpoint(
     validation_config=SEARCH_VALIDATION_CONFIG,
     auto_sanitize=True,
     block_on_threat=True,
     log_threats=True
 )
-def api_search():
+def search_search():
     """Main search endpoint with comprehensive security"""
     try:
         # Check if request passed security validation

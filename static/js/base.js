@@ -132,6 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const plural = totalResults !== 1 ? 's' : '';
 
       // Handle empty query display
+      let message;
       if (!query || query.trim() === '') {
         message = `Showing all jobs`;
       } else {
@@ -180,7 +181,6 @@ document.addEventListener('DOMContentLoaded', () => {
         actionsBox: true,
         title: 'All Countries'
       });
-
     }
   }
 
@@ -219,7 +219,6 @@ document.addEventListener('DOMContentLoaded', () => {
         actionsBox: true,
         title: 'All Organizations'
       });
-
     }
   }
 
@@ -258,7 +257,6 @@ document.addEventListener('DOMContentLoaded', () => {
         actionsBox: true,
         title: 'All Sources'
       });
-
     }
   }
 
@@ -411,21 +409,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateLabelAndColor(slider.value);
 
+    // Only update label on input, don't trigger search
     slider.addEventListener('input', (e) => {
       updateLabelAndColor(e.target.value);
-    });
-
-    // Added change event for when user finishes sliding
-    slider.addEventListener('change', (e) => {
-      // Auto-update when slider value changes
-      const form = document.getElementById('search-form');
-      if (form) {
-        const formData = new FormData(form);
-        formData.set('date_posted_days', e.target.value);
-        const params = new URLSearchParams(formData);
-        fetchFilteredResults(params.toString());
-        handleFilterUpdate();
-      }
     });
   }
 
@@ -464,40 +450,11 @@ document.addEventListener('DOMContentLoaded', () => {
   window.getCurrentSearchParams = getCurrentSearchParams;
   window.toggleFilters = toggleFilters;
 
-  // Added Bootstrap Select change event listeners
   $(document).ready(function() {
-    // Country select change
-    $('#country-select').on('changed.bs.select', function(e) {
-      const form = document.getElementById('search-form');
-      if (form) {
-        const formData = new FormData(form);
-        const params = new URLSearchParams(formData);
-        fetchFilteredResults(params.toString());
-        handleFilterUpdate();
-      }
-    });
-
-    // Organization select change
-    $('#organization-select').on('changed.bs.select', function(e) {
-      const form = document.getElementById('search-form');
-      if (form) {
-        const formData = new FormData(form);
-        const params = new URLSearchParams(formData);
-        fetchFilteredResults(params.toString());
-        handleFilterUpdate();
-      }
-    });
-
-    // Source select change
-    $('#source-select').on('changed.bs.select', function(e) {
-      const form = document.getElementById('search-form');
-      if (form) {
-        const formData = new FormData(form);
-        const params = new URLSearchParams(formData);
-        fetchFilteredResults(params.toString());
-        handleFilterUpdate();
-      }
-    });
+    // Initialize selectpickers but don't add change listeners
+    $('#country-select').selectpicker();
+    $('#organization-select').selectpicker();
+    $('#source-select').selectpicker();
   });
 
   // Handle Load More functionality
@@ -587,7 +544,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Reset Bootstrap Select dropdowns
       $('#country-select').selectpicker('deselectAll');
       $('#organization-select').selectpicker('deselectAll');
-      $('#source-select').selectpicker('deselectAll');  // NEW: Reset source filter
+      $('#source-select').selectpicker('deselectAll');
 
       // Also update the main search input in the filters form to match
       const mainSearchInput = document.querySelector('input[name="q"]');
@@ -598,7 +555,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Create clean search with reset filters
       const params = new URLSearchParams();
       params.set('q', currentQuery);
-      params.set('date_posted_days', '30'); // Reset to default
+      params.set('date_posted_days', '31'); // Reset to default
       // Don't add any country, organization, or source parameters (they're reset)
 
       // Fetch results with clean filters
@@ -623,7 +580,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Toggle filters button NOT found');
   }
 
-  // Handle Update Filters button
+  // Handle Update Filters button - This is the ONLY place filters should update
   const updateButton = document.getElementById('update-filters');
   if (updateButton) {
     updateButton.addEventListener('click', function(e) {
@@ -640,7 +597,16 @@ document.addEventListener('DOMContentLoaded', () => {
       if (form) {
         const formData = new FormData(form);
         formData.set('q', currentQuery); // Ensure sanitized query is sent
+
+        // Log the form data for debugging
+        console.log('Form data being sent:');
+        for (let [key, value] of formData.entries()) {
+          console.log(`${key}: ${value}`);
+        }
+
         const params = new URLSearchParams(formData);
+        console.log('URL params:', params.toString());
+
         fetchFilteredResults(params.toString());
       }
 
@@ -667,7 +633,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const searchButton = document.getElementById('search-btn');
       const activeElement = document.activeElement;
 
-      handleFilterUpdate(); // ORIGINAL: Already had this
+      handleFilterUpdate();
 
       if (activeElement === searchButton || e.submitter === searchButton) {
         // This is a search - reset all filters
@@ -685,6 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Reset Bootstrap Select dropdowns
         $('#country-select').selectpicker('deselectAll');
         $('#organization-select').selectpicker('deselectAll');
+        $('#source-select').selectpicker('deselectAll');
 
         // Sync search inputs
         const navbarSearchInput = document.getElementById('search-input');

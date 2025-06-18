@@ -8,5 +8,5 @@ def register_blueprints(app):
 
     app.register_blueprint(main)
     app.register_blueprint(pages)
-    app.register_blueprint(api)
     app.register_blueprint(utility)
+    app.register_blueprint(search)
