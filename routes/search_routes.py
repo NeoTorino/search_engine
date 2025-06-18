@@ -30,68 +30,6 @@ SEARCH_VALIDATION_CONFIG = {
     'date_posted_days': {'type': 'general', 'max_length': 10}
 }
 
-def secure_get_search_params(max_countries=10, max_organizations=10, max_sources=5,
-                           max_limit=100, max_offset=10000):
-    """
-    Secure version of get_search_params using the security framework
-    """
-    # Get sanitized parameters using the security framework
-    query = get_sanitized_param('q', '').strip()
-
-    # Handle countries (can be single or multiple)
-    countries_raw = get_sanitized_param('countries', get_sanitized_param('country', []))
-    if isinstance(countries_raw, str):
-        countries = [c.strip() for c in countries_raw.split(',') if c.strip()]
-    else:
-        countries = countries_raw if isinstance(countries_raw, list) else []
-
-    # Handle organizations
-    orgs_raw = get_sanitized_param('organizations', get_sanitized_param('organization', []))
-    if isinstance(orgs_raw, str):
-        organizations = [o.strip() for o in orgs_raw.split(',') if o.strip()]
-    else:
-        organizations = orgs_raw if isinstance(orgs_raw, list) else []
-
-    # Handle sources
-    sources_raw = get_sanitized_param('sources', get_sanitized_param('source', []))
-    if isinstance(sources_raw, str):
-        sources = [s.strip() for s in sources_raw.split(',') if s.strip()]
-    else:
-        sources = sources_raw if isinstance(sources_raw, list) else []
-
-    # Get numeric parameters with validation
-    try:
-        limit = min(int(get_sanitized_param('limit', 20)), max_limit)
-    except (ValueError, TypeError):
-        limit = 20
-
-    try:
-        offset = min(int(get_sanitized_param('offset', 0)), max_offset)
-    except (ValueError, TypeError):
-        offset = 0
-
-    try:
-        date_posted_days = int(get_sanitized_param('date_posted_days', 365)) if get_sanitized_param('date_posted_days') else None
-        if date_posted_days and date_posted_days < 0:
-            date_posted_days = 365
-    except (ValueError, TypeError):
-        date_posted_days = 365
-
-    # Apply limits
-    countries = countries[:max_countries]
-    organizations = organizations[:max_organizations]
-    sources = sources[:max_sources]
-
-    return {
-        'query': query,
-        'countries': countries,
-        'organizations': organizations,
-        'sources': sources,
-        'limit': limit,
-        'offset': offset,
-        'date_posted_days': date_posted_days
-    }
-
 @search.route("/insights")
 @secure_endpoint(
     validation_config=SEARCH_VALIDATION_CONFIG,
@@ -107,8 +45,57 @@ def search_insights():
             security_logger.warning("Unsafe request blocked in combined_insights")
             return jsonify({"error": "Invalid request parameters"}), 400
 
-        # Use secure parameter extraction
-        search_params = secure_get_search_params()
+        # Get sanitized parameters directly
+        query = get_sanitized_param('q', '').strip()
+
+        # Handle countries (can be single or multiple)
+        countries_raw = get_sanitized_param('countries', get_sanitized_param('country', []))
+        if isinstance(countries_raw, str):
+            countries = [c.strip() for c in countries_raw.split(',') if c.strip()][:10]  # max 10
+        else:
+            countries = countries_raw[:10] if isinstance(countries_raw, list) else []
+
+        # Handle organizations
+        orgs_raw = get_sanitized_param('organizations', get_sanitized_param('organization', []))
+        if isinstance(orgs_raw, str):
+            organizations = [o.strip() for o in orgs_raw.split(',') if o.strip()][:10]  # max 10
+        else:
+            organizations = orgs_raw[:10] if isinstance(orgs_raw, list) else []
+
+        # Handle sources
+        sources_raw = get_sanitized_param('sources', get_sanitized_param('source', []))
+        if isinstance(sources_raw, str):
+            sources = [s.strip() for s in sources_raw.split(',') if s.strip()][:5]  # max 5
+        else:
+            sources = sources_raw[:5] if isinstance(sources_raw, list) else []
+
+        # Get numeric parameters with validation
+        try:
+            limit = min(int(get_sanitized_param('limit', 20)), 100)
+        except (ValueError, TypeError):
+            limit = 20
+
+        try:
+            offset = min(int(get_sanitized_param('offset', 0)), 10000)
+        except (ValueError, TypeError):
+            offset = 0
+
+        try:
+            date_posted_days = int(get_sanitized_param('date_posted_days', 365)) if get_sanitized_param('date_posted_days') else 365
+            if date_posted_days and date_posted_days < 0:
+                date_posted_days = 365
+        except (ValueError, TypeError):
+            date_posted_days = 365
+
+        search_params = {
+            'query': query,
+            'countries': countries,
+            'organizations': organizations,
+            'sources': sources,
+            'limit': limit,
+            'offset': offset,
+            'date_posted_days': date_posted_days
+        }
 
         # Log security validation results for debugging
         query_validation = get_validation_result('q')
@@ -154,8 +141,44 @@ def search_organizations():
             security_logger.warning("Unsafe request blocked in insights_organizations")
             return jsonify({"error": "Invalid request parameters"}), 400
 
-        # Use secure parameter extraction
-        search_params = secure_get_search_params()
+        # Get sanitized parameters directly
+        query = get_sanitized_param('q', '').strip()
+
+        # Handle countries (can be single or multiple)
+        countries_raw = get_sanitized_param('countries', get_sanitized_param('country', []))
+        if isinstance(countries_raw, str):
+            countries = [c.strip() for c in countries_raw.split(',') if c.strip()][:10]
+        else:
+            countries = countries_raw[:10] if isinstance(countries_raw, list) else []
+
+        # Handle organizations
+        orgs_raw = get_sanitized_param('organizations', get_sanitized_param('organization', []))
+        if isinstance(orgs_raw, str):
+            organizations = [o.strip() for o in orgs_raw.split(',') if o.strip()][:10]
+        else:
+            organizations = orgs_raw[:10] if isinstance(orgs_raw, list) else []
+
+        # Handle sources
+        sources_raw = get_sanitized_param('sources', get_sanitized_param('source', []))
+        if isinstance(sources_raw, str):
+            sources = [s.strip() for s in sources_raw.split(',') if s.strip()][:5]
+        else:
+            sources = sources_raw[:5] if isinstance(sources_raw, list) else []
+
+        try:
+            date_posted_days = int(get_sanitized_param('date_posted_days', 365)) if get_sanitized_param('date_posted_days') else 365
+            if date_posted_days and date_posted_days < 0:
+                date_posted_days = 365
+        except (ValueError, TypeError):
+            date_posted_days = 365
+
+        search_params = {
+            'query': query,
+            'countries': countries,
+            'organizations': organizations,
+            'sources': sources,
+            'date_posted_days': date_posted_days
+        }
 
         data = get_organizations_insights(search_params)
 
@@ -189,24 +212,44 @@ def search_search():
             security_logger.warning("Unsafe request blocked in search_results")
             return jsonify({"error": "Invalid request parameters"}), 400
 
-        # Get standardized and validated search parameters using secure method
-        params = secure_get_search_params(
-            max_countries=10,
-            max_organizations=10,
-            max_sources=5,
-            max_limit=100,
-            max_offset=10000
-        )
+        # Get sanitized parameters directly
+        query = get_sanitized_param('q', '').strip()
 
-        # Extract parameters
-        query = params['query']
-        selected_countries = params['countries']
-        selected_organizations = params['organizations']
-        selected_sources = params['sources']
-        days = params['date_posted_days'] or 365  # Default to 365 if None
-        offset = params['offset']
+        # Handle countries (can be single or multiple)
+        countries_raw = get_sanitized_param('countries', get_sanitized_param('country', []))
+        if isinstance(countries_raw, str):
+            selected_countries = [c.strip() for c in countries_raw.split(',') if c.strip()][:10]
+        else:
+            selected_countries = countries_raw[:10] if isinstance(countries_raw, list) else []
 
-        # Additional security: validate query length and content
+        # Handle organizations
+        orgs_raw = get_sanitized_param('organizations', get_sanitized_param('organization', []))
+        if isinstance(orgs_raw, str):
+            selected_organizations = [o.strip() for o in orgs_raw.split(',') if o.strip()][:10]
+        else:
+            selected_organizations = orgs_raw[:10] if isinstance(orgs_raw, list) else []
+
+        # Handle sources
+        sources_raw = get_sanitized_param('sources', get_sanitized_param('source', []))
+        if isinstance(sources_raw, str):
+            selected_sources = [s.strip() for s in sources_raw.split(',') if s.strip()][:5]
+        else:
+            selected_sources = sources_raw[:5] if isinstance(sources_raw, list) else []
+
+        # Get numeric parameters with validation
+        try:
+            offset = min(int(get_sanitized_param('offset', 0)), 10000)
+        except (ValueError, TypeError):
+            offset = 0
+
+        try:
+            days = int(get_sanitized_param('date_posted_days', 365)) if get_sanitized_param('date_posted_days') else 365
+            if days and days < 0:
+                days = 365
+        except (ValueError, TypeError):
+            days = 365
+
+        # Additional security: validate query length (already handled by decorator but double-check)
         if len(query) > 200:
             security_logger.warning("Query too long: %d characters", len(query))
             return jsonify({"error": "Query too long"}), 400

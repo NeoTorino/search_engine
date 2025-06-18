@@ -483,8 +483,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const res = await fetchWithSecurity(`/search?${params.toString()}`);
 
       if (res.ok) {
-        const html = await res.text();
-        if (!html.trim()) {
+        // Check if response is JSON or HTML
+        const contentType = res.headers.get('content-type');
+        let html;
+
+        if (contentType && contentType.includes('application/json')) {
+          // Handle JSON response (like filter updates)
+          const data = await res.json();
+          html = data.html;
+        } else {
+          // Handle plain HTML response
+          html = await res.text();
+        }
+
+        if (!html || !html.trim()) {
           btn.textContent = 'No more results';
           btn.disabled = true;
           return;
@@ -493,10 +505,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const container = document.getElementById('results-container');
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = html;
+
+        // Check if we actually got new cards
+        const newCards = tempDiv.querySelectorAll('.card');
+        if (newCards.length === 0) {
+          btn.textContent = 'No more results';
+          btn.disabled = true;
+          return;
+        }
+
+        // Append the new HTML
         container.insertAdjacentHTML('beforeend', html);
 
+        // Scroll to first new card
         const allCards = container.querySelectorAll('.card');
-        const newCardsCount = tempDiv.querySelectorAll('.card').length;
+        const newCardsCount = newCards.length;
         const firstNewCardIndex = allCards.length - newCardsCount;
         const firstNewCard = allCards[firstNewCardIndex];
 
@@ -510,15 +533,18 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         }
 
+        // Update button for next load
         btn.dataset.offset = offset + 20;
         btn.disabled = false;
         btn.textContent = 'Load More';
       } else {
         btn.textContent = 'Error loading more results';
+        btn.disabled = true;
       }
     } catch (error) {
       console.error('Error loading more results:', error);
       btn.textContent = 'Error loading more results';
+      btn.disabled = true;
     }
   });
 
