@@ -17,6 +17,7 @@ security_logger = logging.getLogger('security')
 @search.route("/search")
 @validate_request_size(max_size=2048)  # Small limit for search
 def search_results():
+
     # Enhanced input validation
     raw_query = request.args.get("q", "")
 

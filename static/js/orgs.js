@@ -63,7 +63,7 @@ function sortTable(column) {
 
     // Get current filtered data
     const searchTerm = document.getElementById('searchOrgs').value.toLowerCase();
-    let dataToSort = organizationsData.filter(org => 
+    let dataToSort = organizationsData.filter(org =>
         org.name.toLowerCase().includes(searchTerm) ||
         (org.country && org.country.toLowerCase().includes(searchTerm))
     );
@@ -122,7 +122,7 @@ function updateSortIndicators() {
 // Load organizations table
 async function loadOrganizations(searchParams = '') {
     try {
-        const url = searchParams ? `/api/insights/organizations?${searchParams}` : '/api/insights/organizations';
+        const url = searchParams ? `/api/organizations?${searchParams}` : '/api/organizations';
         const response = await fetch(url);
         const data = await response.json();
 
@@ -130,7 +130,7 @@ async function loadOrganizations(searchParams = '') {
         renderOrganizationsTable(organizationsData);
     } catch (error) {
         console.error('Error loading organizations:', error);
-        document.getElementById('orgsTableBody').innerHTML = 
+        document.getElementById('orgsTableBody').innerHTML =
             '<tr><td colspan="3" class="text-center"><div class="error-message">Error loading organizations</div></td></tr>';
     }
 }
@@ -175,7 +175,7 @@ function renderOrganizationsTable(organizations) {
 // Filter organizations
 function filterOrganizations() {
     const searchTerm = document.getElementById('searchOrgs').value.toLowerCase();
-    let filtered = organizationsData.filter(org => 
+    let filtered = organizationsData.filter(org =>
         org.name.toLowerCase().includes(searchTerm) ||
         (org.country && org.country.toLowerCase().includes(searchTerm))
     );
@@ -218,10 +218,10 @@ function filterOrganizations() {
 function formatDateLocale(dateString) {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
     });
 }
 
