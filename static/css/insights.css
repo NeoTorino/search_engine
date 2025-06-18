@@ -79,7 +79,7 @@
     .chart-container {
         padding-bottom: 2.5rem;
     }
-    
+
     .chart-container > div {
         padding-bottom: 2.5rem;
     }
@@ -89,7 +89,7 @@
     .chart-container {
         padding-bottom: 3rem;
     }
-    
+
     .chart-container > div {
         padding-bottom: 3rem;
     }
@@ -129,7 +129,7 @@
     .chart-container:has(#countriesChart) {
         max-height: 500px;
     }
-    
+
     .chart-container canvas#countriesChart {
         max-height: 350px !important;
     }
@@ -139,7 +139,7 @@
     .chart-container:has(#countriesChart) {
         max-height: 450px;
     }
-    
+
     .chart-container canvas#countriesChart {
         max-height: 300px !important;
     }
@@ -195,7 +195,7 @@
     .col-lg-4 .chart-container {
         min-height: 450px;
     }
-    
+
     .col-lg-8 .chart-container > div,
     .col-lg-4 .chart-container > div {
         height: 350px !important;
@@ -207,7 +207,7 @@
     .col-lg-4 .chart-container {
         min-height: 400px;
     }
-    
+
     .col-lg-8 .chart-container > div,
     .col-lg-4 .chart-container > div {
         height: 300px !important;
@@ -219,7 +219,7 @@
     .col-lg-4 .chart-container {
         min-height: 350px;
     }
-    
+
     .col-lg-8 .chart-container > div,
     .col-lg-4 .chart-container > div {
         height: 250px !important;

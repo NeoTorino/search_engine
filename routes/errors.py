@@ -2,7 +2,7 @@ import time
 import logging
 import traceback
 from flask import render_template, request
-from utils.monitoring import log_security_event
+from security.monitoring import log_security_event
 
 security_logger = logging.getLogger('security')
 

@@ -5,7 +5,9 @@ import logging
 from functools import wraps
 from datetime import datetime
 import bleach
-from flask import request, abort
+from flask import request, abort, current_app
+
+from security_config import SecurityConfig
 
 # Configure security logger
 security_logger = logging.getLogger('security')
@@ -466,6 +468,139 @@ def validate_content_type(allowed_types):
             if content_type and not any(ct in content_type for ct in allowed_types):
                 log_security_event("INVALID_CONTENT_TYPE", f"Content-Type: {content_type}")
                 abort(415)  # Unsupported Media Type
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+def get_search_params(max_countries=20, max_organizations=50, max_sources=10, max_limit=100, max_offset=1000):
+    """
+    Extract and return standardized search parameters from request with comprehensive security validation
+
+    Args:
+        max_countries (int): Maximum number of country filters allowed
+        max_organizations (int): Maximum number of organization filters allowed
+        max_sources (int): Maximum number of source filters allowed
+        max_limit (int): Maximum pagination limit allowed
+        max_offset (int): Maximum pagination offset allowed
+
+    Returns:
+        dict: Sanitized and validated search parameters
+    """
+    try:
+        # Validate search query
+        raw_query = request.args.get('q', '')
+        is_valid, sanitized_query = validate_search_query(raw_query)
+        if not is_valid:
+            security_logger.warning("Invalid search query blocked: %s", raw_query)
+            log_security_event("INVALID_SEARCH_QUERY", f"Blocked query: {raw_query}")
+            sanitized_query = ''
+
+        # Validate filter parameters with configurable limits
+        countries = validate_filter_values(
+            request.args.getlist('country'), 
+            max_items=max_countries
+        )
+
+        organizations = validate_filter_values(
+            request.args.getlist('organization'), 
+            max_items=max_organizations
+        )
+
+        sources = validate_filter_values(
+            request.args.getlist('source'), 
+            max_items=max_sources
+        )
+
+        # Validate date parameter with special handling for >= 31 days
+        date_posted_days = request.args.get('date_posted_days', type=int)
+        if date_posted_days is not None:
+            # Limit date range to reasonable values
+            if date_posted_days < 0:
+                log_security_event("INVALID_DATE_RANGE", f"Negative date days: {date_posted_days}")
+                date_posted_days = None
+            elif date_posted_days >= 31:
+                # If >= 31 days, treat as "everything" (365 days)
+                date_posted_days = 365
+            elif date_posted_days > 365:
+                log_security_event("INVALID_DATE_RANGE", f"Date days too large: {date_posted_days}")
+                date_posted_days = 365
+
+        # Validate pagination parameters - support both 'offset'/'from' and 'limit' parameters
+        offset = request.args.get('offset', request.args.get('from', 0), type=int)
+        limit = request.args.get('limit', 20, type=int)
+        offset, limit, error = validate_pagination_params(offset, limit, max_limit=max_limit, max_offset=max_offset)
+        if error:
+            log_security_event("INVALID_PAGINATION", error)
+
+        return {
+            'query': sanitized_query,
+            'countries': countries,
+            'organizations': organizations,
+            'sources': sources,
+            'date_posted_days': date_posted_days,
+            'offset': offset,
+            'limit': limit
+        }
+
+    except Exception as e:
+        security_logger.error("Error processing search parameters: %s", e)
+        log_security_event("SEARCH_PARAMS_ERROR", f"Error: {e}")
+        # Return safe defaults
+        return {
+            'query': '',
+            'countries': [],
+            'organizations': [],
+            'sources': [],
+            'date_posted_days': None,
+            'offset': 0,
+            'limit': 20
+        }
+
+def get_limiter():
+    """Get limiter from extensions safely"""
+    try:
+        from app_factory.extensions import get_extensions
+        extensions = get_extensions()
+        return extensions.get('limiter')
+    except Exception as e:
+        current_app.logger.error(f"Failed to get limiter: {e}")
+        return None
+
+def security_check():
+    """Comprehensive security check decorator"""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Check for bot behavior
+            if detect_bot_behavior():
+                log_security_event("BOT_DETECTED", "Suspicious bot behavior detected")
+                abort(429)  # Too Many Requests
+
+            # Validate request size
+            if request.content_length and request.content_length > 1024*10:  # 10KB limit for API
+                log_security_event("LARGE_REQUEST", f"Size: {request.content_length}")
+                abort(413)  # Request Entity Too Large
+
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+def rate_limit_decorator(rate_limit_key):
+    """Dynamic rate limiter decorator"""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            limiter = get_limiter()
+            if limiter:
+                # Apply rate limiting
+                try:
+                    rate_limit = SecurityConfig.RATE_LIMITS['api'][2]
+                    # Use limiter's test method to check if request should be limited
+                    limiter.test(rate_limit)
+                except Exception as e:
+                    current_app.logger.warning(f"Rate limiting failed: {e}")
+                    # Continue without rate limiting if it fails
+
             return f(*args, **kwargs)
         return decorated_function
     return decorator

@@ -4,7 +4,7 @@ import traceback
 
 from flask import Blueprint, render_template
 
-from utils.monitoring import log_security_event
+from security.monitoring import log_security_event
 
 error = Blueprint('error', __name__)
 

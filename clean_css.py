@@ -52,7 +52,8 @@ def find_unused_css_selectors(html_dir, css_dir):
                     unused_ids = css_ids - all_used_ids
 
                     if unused_classes or unused_ids:
-                        print(f"\nIn {file}:")
+                        print(f"
+In {file}:")
                         for cls in sorted(unused_classes):
                             print(f"  Unused class: .{cls}")
                         for id_ in sorted(unused_ids):

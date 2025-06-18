@@ -53,7 +53,6 @@ document.addEventListener('DOMContentLoaded', () => {
         input = input.replace(pattern, '');
     });
 
-
     // Normalize whitespace
     input = input.replace(/\s+/g, ' ').trim();
 
@@ -301,12 +300,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof window.clearTabCache === 'function') {
         window.clearTabCache();
     }
-    
+
     // Reset insights loading state
     if (typeof window.resetInsightsLoadingState === 'function') {
         window.resetInsightsLoadingState();
     }
-    
+
     // If currently on insights tab, reload the data
     const activeTab = document.querySelector('#mainTabs .nav-link.active');
     if (activeTab && activeTab.getAttribute('data-bs-target') === '#insights') {
@@ -436,7 +435,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (activeTab) {
       const targetTab = activeTab.getAttribute('data-bs-target');
       const searchParams = getCurrentSearchParams();
-      
+
       if (targetTab === '#organizations' && typeof window.loadOrganizations === 'function') {
         window.loadOrganizations(searchParams);
       } else if (targetTab === '#insights' && typeof window.loadInsights === 'function') {
@@ -449,14 +448,14 @@ document.addEventListener('DOMContentLoaded', () => {
   function getCurrentSearchParams() {
     const form = document.getElementById('search-form');
     if (!form) return '';
-    
+
     const formData = new FormData(form);
     const params = new URLSearchParams();
-    
+
     for (let [key, value] of formData.entries()) {
       if (value) params.append(key, value);
     }
-    
+
     console.log('Current search params:', params.toString());
     return params.toString();
   }

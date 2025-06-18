@@ -13,7 +13,7 @@
             border-bottom: 2px solid #dee2e6;
             margin-bottom: 2rem;
         }
-        
+
         .nav-tabs .nav-link {
             border: none;
             color: #6c757d;
@@ -21,27 +21,27 @@
             padding: 1rem 1.5rem;
             transition: all 0.3s ease;
         }
-        
+
         .nav-tabs .nav-link:hover {
             border: none;
             color: #007bff;
         }
-        
+
         .nav-tabs .nav-link.active {
             color: #007bff;
             background-color: transparent;
             border-bottom: 2px solid #007bff;
             border-radius: 0;
         }
-        
+
         .tab-content {
             min-height: 400px;
         }
-        
+
         .tab-pane {
             animation: fadeIn 0.3s ease-in;
         }
-        
+
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -225,27 +225,27 @@
 {% block scripts %}
     <!-- Chart.js for insights -->
     <script nonce="{{ nonce }}"src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js"></script>
-    
+
     <!-- Load all JavaScript files -->
     <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/orgs.js') }}?v={{ time.time() }}"></script>
     <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/insights.js') }}?v={{ time.time() }}"></script>
-    
+
     <script nonce="{{ nonce }}">
         // Initialize tab functionality and load data when tabs are switched
         document.addEventListener('DOMContentLoaded', function() {
             const tabTriggerList = document.querySelectorAll('#mainTabs button[data-bs-toggle="tab"]');
-            
+
             // Track loaded tabs to prevent duplicate loading
             const loadedTabs = new Set();
-            
+
             tabTriggerList.forEach(tabTrigger => {
                 tabTrigger.addEventListener('shown.bs.tab', event => {
                     const targetTab = event.target.getAttribute('data-bs-target');
                     const searchParams = getCurrentSearchParams();
-                    
+
                     // Create a unique key for this tab + search params combination
                     const tabKey = `${targetTab}-${searchParams}`;
-                    
+
                     // Load organizations data when organizations tab is shown
                     if (targetTab === '#organizations' && typeof window.loadOrganizations === 'function') {
                         if (!loadedTabs.has(`orgs-${searchParams}`)) {
@@ -253,7 +253,7 @@
                             window.loadOrganizations(searchParams);
                         }
                     }
-                    
+
                     // Load insights data when insights tab is shown
                     if (targetTab === '#insights' && typeof window.loadInsights === 'function') {
                         if (!loadedTabs.has(`insights-${searchParams}`)) {
@@ -263,16 +263,16 @@
                     }
                 });
             });
-            
+
             // Clear the loaded tabs cache when search parameters change
             // This ensures fresh data is loaded when filters change
             window.clearTabCache = function() {
                 loadedTabs.clear();
             };
-            
+
             // Make getCurrentSearchParams available globally for filter updates
             window.getCurrentSearchParams = getCurrentSearchParams;
-            
+
             // If insights tab is active on page load, load the data
             const activeTab = document.querySelector('#mainTabs .nav-link.active');
             if (activeTab && activeTab.getAttribute('data-bs-target') === '#insights') {

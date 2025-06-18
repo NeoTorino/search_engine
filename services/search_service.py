@@ -2,7 +2,7 @@ import os
 import json
 from markupsafe import escape
 import requests
-from utils.utils import fix_encoding, truncate_description
+from lib.text_processing import fix_encoding, truncate_description
 
 OPENSEARCH_URL = "https://localhost:9200"
 INDEX_NAME = "jobs"

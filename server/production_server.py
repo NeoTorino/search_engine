@@ -3,7 +3,7 @@ import threading
 from flask import Flask, redirect
 from werkzeug.serving import make_server
 
-from utils.monitoring import security_monitor
+from security.monitoring import security_monitor
 from .ssl_context import create_ssl_context
 
 class ProductionServer:

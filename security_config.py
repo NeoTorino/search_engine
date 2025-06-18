@@ -115,13 +115,13 @@ class SecurityEnforcer:
         try:
             # Test connection
             self.redis_client.ping()
-            
+
             # Check if AUTH is configured (for production)
             if os.getenv('FLASK_ENV') == 'production':
                 redis_url = os.getenv('REDIS_URL', '')
                 if not ('password' in redis_url or '@' in redis_url):
                     self.logger.warning("Redis authentication not configured in production")
-            
+
             return True
         except Exception as e:
             self.logger.error("Redis connection failed: %s", e)

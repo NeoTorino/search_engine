@@ -1,16 +1,15 @@
 import os
-import secrets
 import urllib3
-from datetime import datetime
-from flask import Flask, request, redirect, g
+from flask import Flask
 from dotenv import load_dotenv
+
+from filters.custom_filters import register_filters
+from security.monitoring.logging import security_monitor
 
 from .extensions import init_extensions
 from .middleware_setup import setup_middleware
 from .security_setup import setup_security
 from .route_setup import register_blueprints
-from filters.custom_filters import register_filters
-from utils.monitoring import security_monitor
 
 # Load environment
 load_dotenv(".env")
@@ -28,7 +27,7 @@ def create_app(config_class=None):
     basedir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
 
     # Create Flask app with explicit template and static folder paths
-    app = Flask(__name__, 
+    app = Flask(__name__,
                 template_folder=os.path.join(basedir, 'templates'),
                 static_folder=os.path.join(basedir, 'static'))
 

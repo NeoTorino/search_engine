@@ -12,46 +12,46 @@ async function loadInsights(searchParams = '') {
         console.log('Insights already loading for these parameters, skipping duplicate call');
         return;
     }
-    
+
     // If different parameters, allow the call
     if (currentSearchParams !== searchParams) {
         isLoading = false;
     }
-    
+
     if (isLoading) {
         console.log('Insights already loading, skipping duplicate call');
         return;
     }
-    
+
     isLoading = true;
     currentSearchParams = searchParams;
-    
+
     try {
         // Show loading state for all components
         showLoadingState();
-        
+
         // Make single API call to get all insights data
-        const url = searchParams ? `/api/insights?${searchParams}` : '/api/insights';
+        const url = searchParams ? `/insights?${searchParams}` : '/insights';
         console.log('Loading insights from:', url);
-        
+
         const response = await fetch(url);
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const data = await response.json();
-        
+
         if (data.error) {
             throw new Error(data.error);
         }
-        
+
         // Process all insights data from single response
         loadOverviewInsightsFromData(data.overview);
         loadJobsPerDayFromData(data.jobs_per_day);
         loadTopCountriesFromData(data.top_countries);
         loadWordCloudFromData(data.word_cloud);
-        
+
     } catch (error) {
         console.error('Error loading insights:', error);
         showAllErrors();
@@ -78,22 +78,22 @@ function showLoadingState() {
     const totalJobsEl = document.getElementById('totalJobs');
     const totalOrgsEl = document.getElementById('totalOrgs');
     const avgJobsPerOrgEl = document.getElementById('avgJobsPerOrg');
-    
+
     if (totalJobsEl) totalJobsEl.innerHTML = '<small style="color: #666;">Loading...</small>';
     if (totalOrgsEl) totalOrgsEl.innerHTML = '<small style="color: #666;">Loading...</small>';
     if (avgJobsPerOrgEl) avgJobsPerOrgEl.innerHTML = '<small style="color: #666;">Loading...</small>';
-    
+
     // Show loading for charts - with proper null checks
     const jobsChartEl = document.getElementById('jobsPerDayChart');
     if (jobsChartEl && jobsChartEl.parentElement) {
         jobsChartEl.parentElement.innerHTML = '<div class="loading-message" style="text-align: center; padding: 2rem; color: #666;">Loading jobs per day chart...</div><canvas id="jobsPerDayChart"></canvas>';
     }
-    
+
     const countriesChartEl = document.getElementById('countriesChart');
     if (countriesChartEl && countriesChartEl.parentElement) {
         countriesChartEl.parentElement.innerHTML = '<div class="loading-message" style="text-align: center; padding: 2rem; color: #666;">Loading countries chart...</div><canvas id="countriesChart"></canvas>';
     }
-    
+
     // Show loading for word cloud
     const canvas = document.getElementById('canvas');
     const container = canvas ? canvas.parentElement : document.querySelector('.word-cloud-container');
@@ -111,17 +111,17 @@ function showAllErrors() {
     showError('totalJobs');
     showError('totalOrgs');
     showError('avgJobsPerOrg');
-    
+
     const jobsChartEl = document.getElementById('jobsPerDayChart');
     if (jobsChartEl && jobsChartEl.parentElement) {
         jobsChartEl.parentElement.innerHTML = '<div class="error-message">Error loading jobs per day chart</div><canvas id="jobsPerDayChart"></canvas>';
     }
-    
+
     const countriesChartEl = document.getElementById('countriesChart');
     if (countriesChartEl && countriesChartEl.parentElement) {
         countriesChartEl.parentElement.innerHTML = '<div class="error-message">Error loading countries chart</div><canvas id="countriesChart"></canvas>';
     }
-    
+
     const canvas = document.getElementById('canvas');
     const container = canvas ? canvas.parentElement : document.querySelector('.word-cloud-container');
     if (container) {
@@ -146,19 +146,19 @@ function loadOverviewInsightsFromData(data) {
         if (!data || typeof data !== 'object') {
             throw new Error('Invalid overview data');
         }
-        
+
         const totalJobs = data.total_jobs || 0;
         const totalOrgs = data.total_organizations || 0;
         const avgJobsPerOrg = data.avg_jobs_per_org || 0;
-        
+
         const totalJobsEl = document.getElementById('totalJobs');
         const totalOrgsEl = document.getElementById('totalOrgs');
         const avgJobsPerOrgEl = document.getElementById('avgJobsPerOrg');
-        
+
         if (totalJobsEl) totalJobsEl.textContent = totalJobs.toLocaleString();
         if (totalOrgsEl) totalOrgsEl.textContent = totalOrgs.toLocaleString();
         if (avgJobsPerOrgEl) avgJobsPerOrgEl.textContent = Math.round(avgJobsPerOrg);
-        
+
     } catch (error) {
         console.error('Error processing overview data:', error);
         showError('totalJobs');
@@ -177,17 +177,17 @@ function loadJobsPerDayFromData(data) {
         console.log("Original data length:", data.dates.length);
         console.log("Sample dates:", data.dates.slice(0, 5));
         console.log("Sample counts:", data.counts.slice(0, 5));
-        
+
         // Check if the chart element exists first
         let chartElement = document.getElementById('jobsPerDayChart');
         if (!chartElement) {
             console.warn('jobsPerDayChart element not found, attempting to create it');
-            
+
             const chartContainer = document.querySelector('.chart-container canvas#jobsPerDayChart')?.parentElement ||
                                 document.querySelector('canvas#jobsPerDayChart')?.parentElement ||
                                 document.querySelector('.chart-container:has(h3:contains("Jobs Posted Per Day"))') ||
                                 document.querySelector('.chart-container');
-            
+
             if (chartContainer) {
                 // Create the canvas element with fixed height
                 chartContainer.innerHTML = `
@@ -207,7 +207,7 @@ function loadJobsPerDayFromData(data) {
                 loadingMessage.remove();
             }
         }
-        
+
         const ctx = chartElement.getContext('2d');
 
         if (jobsPerDayChart) {
@@ -322,14 +322,14 @@ function loadJobsPerDayFromData(data) {
                 }
             }
         });
-        
+
     } catch (error) {
         console.error('Error loading jobs per day chart:', error);
-        
+
         const chartContainer = document.querySelector('.chart-container canvas#jobsPerDayChart')?.parentElement ||
                              document.querySelector('canvas#jobsPerDayChart')?.parentElement ||
                              document.querySelector('.chart-container');
-        
+
         if (chartContainer) {
             chartContainer.innerHTML = '<div class="error-message">Error loading jobs per day chart</div>';
         }
@@ -338,12 +338,12 @@ function loadJobsPerDayFromData(data) {
 
 function processChartData(dates, counts) {
     const dataLength = dates.length;
-    
+
     // If data is reasonable size (< 90 days), show all
     if (dataLength <= 90) {
         return { dates, counts };
     }
-    
+
     // If data is large (90-180 days), show every other day
     if (dataLength <= 180) {
         const filteredDates = [];
@@ -354,34 +354,34 @@ function processChartData(dates, counts) {
         }
         return { dates: filteredDates, counts: filteredCounts };
     }
-    
+
     // If data is very large (> 180 days), aggregate by week
     if (dataLength > 180) {
         return aggregateByWeek(dates, counts);
     }
-    
+
     return { dates, counts };
 }
 
 function aggregateByWeek(dates, counts) {
     const weeklyData = [];
     const weeklyDates = [];
-    
+
     // Group by weeks (every 7 days)
     for (let i = 0; i < dates.length; i += 7) {
         const weekEnd = Math.min(i + 6, dates.length - 1);
-        
+
         // Sum counts for the week
         let weeklyTotal = 0;
         for (let j = i; j <= weekEnd; j++) {
             weeklyTotal += counts[j] || 0;
         }
-        
+
         // Use the last date of the week as label
         weeklyDates.push(`Week of ${dates[i]}`);
         weeklyData.push(weeklyTotal);
     }
-    
+
     return { dates: weeklyDates, counts: weeklyData };
 }
 
@@ -389,11 +389,11 @@ function updateChartData(dates, counts) {
     if (jobsPerDayChart) {
         jobsPerDayChart.data.labels = dates;
         jobsPerDayChart.data.datasets[0].data = counts;
-        
+
         // Adjust point size based on data density
         const pointSize = dates.length > 100 ? 2 : dates.length > 50 ? 3 : 4;
         jobsPerDayChart.data.datasets[0].pointRadius = pointSize;
-        
+
         jobsPerDayChart.update('none'); // No animation for better performance
     }
 }
@@ -404,18 +404,18 @@ function loadTopCountriesFromData(data) {
         if (!data || typeof data !== 'object' || !Array.isArray(data.countries) || !Array.isArray(data.counts)) {
             throw new Error('Invalid top countries data');
         }
-        
+
         // Check if the chart element exists first
         let chartElement = document.getElementById('countriesChart');
         if (!chartElement) {
             console.warn('countriesChart element not found, attempting to create it');
-            
+
             // Try to find the parent container
             const chartContainer = document.querySelector('.chart-container canvas#countriesChart')?.parentElement ||
                                 document.querySelector('canvas#countriesChart')?.parentElement ||
                                 document.querySelector('.chart-container:has(h3:contains("Top Countries"))') ||
                                 document.querySelectorAll('.chart-container')[1]; // Second chart container
-            
+
             if (chartContainer) {
                 // Create the canvas element with FIXED dimensions optimized for col-lg-4
                 chartContainer.innerHTML = `
@@ -435,20 +435,20 @@ function loadTopCountriesFromData(data) {
                 loadingMessage.remove();
             }
         }
-        
+
         // Destroy existing chart before creating new one
         if (countriesChart) {
             countriesChart.destroy();
             countriesChart = null;
         }
-        
+
         const ctx = chartElement.getContext('2d');
 
         // Limit to top 10 countries to prevent overcrowding
         const maxCountries = 10;
         let displayCountries = data.countries.slice(0, maxCountries);
         let displayCounts = data.counts.slice(0, maxCountries);
-        
+
         // If there are more countries, group the rest as "Others"
         if (data.countries.length > maxCountries) {
             const othersCounts = data.counts.slice(maxCountries).reduce((sum, count) => sum + count, 0);
@@ -519,10 +519,10 @@ function loadTopCountriesFromData(data) {
                                 return data.labels.map((label, index) => {
                                     const value = data.datasets[0].data[index];
                                     const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
-                                    
+
                                     // Shorter truncation for narrow column
                                     const truncatedLabel = label.length > 8 ? label.substring(0, 6) + '...' : label;
-                                    
+
                                     return {
                                         text: `${truncatedLabel} (${percentage}%)`,
                                         fillStyle: data.datasets[0].backgroundColor[index],
@@ -568,15 +568,15 @@ function loadTopCountriesFromData(data) {
                 }
             }
         });
-        
+
     } catch (error) {
         console.error('Error loading top countries chart:', error);
-        
+
         // Try to find any suitable container for error message
         const chartContainer = document.querySelector('.chart-container canvas#countriesChart')?.parentElement ||
                              document.querySelector('canvas#countriesChart')?.parentElement ||
                              document.querySelectorAll('.chart-container')[1];
-        
+
         if (chartContainer) {
             chartContainer.innerHTML = `
                 <h3 class="mb-4">Top Countries</h3>
@@ -636,7 +636,7 @@ function createHTMLWordCloud(words) {
         console.error('Word cloud container not found');
         return;
     }
-    
+
     const limitedWords = words.slice(0, 50);
 
     if (limitedWords.length === 0) {

@@ -122,7 +122,7 @@ function updateSortIndicators() {
 // Load organizations table
 async function loadOrganizations(searchParams = '') {
     try {
-        const url = searchParams ? `/api/insights/organizations?${searchParams}` : '/api/insights/organizations';
+        const url = searchParams ? `/organizations?${searchParams}` : '/organizations';
         const response = await fetch(url);
         const data = await response.json();
 

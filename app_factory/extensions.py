@@ -1,7 +1,7 @@
 import redis
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from utils.monitoring import security_monitor
+from security.monitoring.logging import security_monitor
 from security_config import setup_enhanced_logging
 
 # Global extension objects

@@ -5,29 +5,65 @@ from collections import Counter
 from datetime import datetime, timedelta
 import requests
 
-from utils.security import (
-    validate_search_query, sanitize_input, validate_filter_values,
-    log_security_event, sanitize_opensearch_query
+# Updated imports to match your security module structure
+from security.core.validators import security_validator
+from security.core.sanitizers import (
+    unified_sanitizer, SanitizationConfig,
+    SecurityLevel, sanitize_search_query
 )
+from security.engines.opensearch import sanitize_opensearch_query, validate_opensearch_aggregation
+from security.monitoring.logging import log_security_event
 
 OPENSEARCH_URL = "https://localhost:9200"
 INDEX_NAME = "jobs"
 AUTH = (os.getenv("USERNAME"), os.getenv("PASSWORD"))
 
+def validate_search_query(query):
+    """Wrapper function for search query validation using the new security validator"""
+    if not query:
+        return True, ""
+
+    result = security_validator.validate_input(
+        value=query,
+        input_type='search',
+        max_length=500
+    )
+
+    return result.is_valid, result.sanitized_value
+
+def validate_filter_values(values, max_items=50):
+    """Wrapper function for filter validation using the new security validator"""
+    if not values:
+        return []
+
+    if not isinstance(values, list):
+        values = [values]
+
+    validated_values = []
+    for value in values[:max_items]:  # Limit number of items
+        result = security_validator.validate_input(
+            value=value,
+            input_type='filter',
+            max_length=100
+        )
+        if result.is_valid and result.sanitized_value:
+            validated_values.append(result.sanitized_value)
+
+    return validated_values
 
 def build_date_range_filter(date_posted_days):
     """Build date range filter for OpenSearch queries"""
     if not date_posted_days or not isinstance(date_posted_days, int):
         return None
-    
+
     # Validate date range (1-365 days)
     if date_posted_days < 1 or date_posted_days > 365:
         return None
-    
+
     try:
         end_date = datetime.utcnow()
         start_date = end_date - timedelta(days=date_posted_days)
-        
+
         return {
             "gte": start_date.isoformat(),
             "lte": end_date.isoformat()
@@ -36,12 +72,11 @@ def build_date_range_filter(date_posted_days):
         log_security_event("DATE_FILTER_ERROR", f"Error building date filter: {e}")
         return None
 
-
 def process_search_params(search_params):
     """Process and sanitize search parameters with comprehensive validation"""
     if not search_params or not isinstance(search_params, dict):
         return None, [], [], [], None
-    
+
     try:
         # Validate and sanitize query
         query = search_params.get('query', '').strip()
@@ -52,42 +87,41 @@ def process_search_params(search_params):
                 query = ""  # Invalid query, treat as empty
             else:
                 query = sanitized_query
-        
+
         # Process and validate filter parameters
-        selected_countries = validate_filter_values(
-            search_params.get('countries', []), 
-            max_items=20
-        )
-        
-        selected_organizations = validate_filter_values(
-            search_params.get('organizations', []), 
-            max_items=50
-        )
-        
-        selected_sources = validate_filter_values(
-            search_params.get('sources', []), 
-            max_items=10
-        )
-        
+        selected_countries = []
+        if 'countries' in search_params:
+            countries_raw = search_params.get('countries', [])
+            selected_countries = validate_filter_values(countries_raw, max_items=20)
+
+        selected_organizations = []
+        if 'organizations' in search_params:
+            orgs_raw = search_params.get('organizations', [])
+            selected_organizations = validate_filter_values(orgs_raw, max_items=50)
+
+        selected_sources = []
+        if 'sources' in search_params:
+            sources_raw = search_params.get('sources', [])
+            selected_sources = validate_filter_values(sources_raw, max_items=10)
+
         # Build date range filter
         date_posted_days = search_params.get('date_posted_days')
         date_range = None
         if date_posted_days is not None:
             date_range = build_date_range_filter(date_posted_days)
-        
+
         return query, selected_countries, selected_organizations, selected_sources, date_range
-        
+
     except Exception as e:
         log_security_event("SEARCH_PARAMS_PROCESSING_ERROR", f"Error: {e}")
         return "", [], [], [], None
-
 
 def build_filtered_query(query=None, selected_countries=None, selected_organizations=None, selected_sources=None, date_range=None):
     """Build a filtered query with comprehensive security validation"""
     try:
         has_text_query = query and query.strip()
         has_filters = bool(selected_countries or selected_organizations or selected_sources or date_range)
-        
+
         if has_text_query or has_filters:
             bool_query = {
                 "bool": {
@@ -95,15 +129,15 @@ def build_filtered_query(query=None, selected_countries=None, selected_organizat
                     "filter": []
                 }
             }
-            
+
             # Add text search if query is not empty
             if has_text_query:
-                # Sanitize query one more time before adding to OpenSearch
-                clean_query = sanitize_input(query, max_length=200)
+                # Double sanitize query for extra safety
+                clean_query = sanitize_search_query(query)
                 if clean_query:
                     bool_query["bool"]["must"].append({
                         "multi_match": {
-                            "query": clean_query, 
+                            "query": clean_query,
                             "fields": ["title"]
                         }
                     })
@@ -111,47 +145,60 @@ def build_filtered_query(query=None, selected_countries=None, selected_organizat
                     bool_query["bool"]["must"].append({"match_all": {}})
             else:
                 bool_query["bool"]["must"].append({"match_all": {}})
-            
-            # Add filters with validation
+
+            # Add filters with validation using unified sanitizer
+            config = SanitizationConfig(
+                max_length=50,
+                security_level=SecurityLevel.HIGH,
+                preserve_case=True
+            )
+
             if selected_countries and isinstance(selected_countries, list):
-                # Additional validation for country names
-                safe_countries = [
-                    sanitize_input(country, max_length=50) 
-                    for country in selected_countries[:20]  # Limit to 20 countries
-                    if country and len(country) >= 2
-                ]
+                safe_countries = []
+                for country in selected_countries[:20]:  # Limit to 20 countries
+                    clean_country = unified_sanitizer.sanitize(country, config)
+                    if clean_country and len(clean_country) >= 2:
+                        safe_countries.append(clean_country)
+
                 if safe_countries:
                     bool_query["bool"]["filter"].append({"terms": {"country": safe_countries}})
-            
+
             if selected_organizations and isinstance(selected_organizations, list):
-                safe_orgs = [
-                    sanitize_input(org, max_length=100) 
-                    for org in selected_organizations[:50]  # Limit to 50 orgs
-                    if org and len(org) >= 2
-                ]
+                safe_orgs = []
+                org_config = SanitizationConfig(
+                    max_length=100,
+                    security_level=SecurityLevel.HIGH,
+                    preserve_case=True
+                )
+                for org in selected_organizations[:50]:  # Limit to 50 orgs
+                    clean_org = unified_sanitizer.sanitize(org, org_config)
+                    if clean_org and len(clean_org) >= 2:
+                        safe_orgs.append(clean_org)
+
                 if safe_orgs:
                     bool_query["bool"]["filter"].append({"terms": {"organization": safe_orgs}})
-            
+
             if selected_sources and isinstance(selected_sources, list):
-                safe_sources = [
-                    sanitize_input(source, max_length=50) 
-                    for source in selected_sources[:10]  # Limit to 10 sources
-                    if source and len(source) >= 2
-                ]
+                safe_sources = []
+                for source in selected_sources[:10]:  # Limit to 10 sources
+                    clean_source = unified_sanitizer.sanitize(source, config)
+                    if clean_source and len(clean_source) >= 2:
+                        safe_sources.append(clean_source)
+
                 if safe_sources:
                     bool_query["bool"]["filter"].append({"terms": {"source": safe_sources}})
-            
+
             if date_range and isinstance(date_range, dict):
                 bool_query["bool"]["filter"].append({"range": {"date_posted": date_range}})
-                
+
+            # Use the OpenSearch security engine to clean the final query
             return sanitize_opensearch_query(bool_query)
-        
+
         return {"match_all": {}}
-        
+
     except Exception as e:
         log_security_event("QUERY_BUILD_ERROR", f"Error building query: {e}")
         return {"match_all": {}}
-
 
 def load_stop_words():
     """Load stop words from JSON file with error handling"""
@@ -163,7 +210,7 @@ def load_stop_words():
             stop_words_list = json.load(f)
             # Convert to set for faster lookup and add job-specific stop words
             stop_words = set(stop_words_list + [
-                'job', 'position', 'role', 'opportunity', 'vacancy', 
+                'job', 'position', 'role', 'opportunity', 'vacancy',
                 '&', '-', '/', '|', '–', 'the', 'and', 'or', 'for', 'with'
             ])
             return stop_words
@@ -171,21 +218,20 @@ def load_stop_words():
         log_security_event("STOP_WORDS_LOAD_ERROR", f"Error: {e}")
         # Fallback to basic stop words
         return {
-            'and', 'or', 'the', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 
+            'and', 'or', 'the', 'a', 'an', 'in', 'on', 'at', 'to', 'for',
             'of', 'with', 'by', 'from', 'as', 'is', 'are', 'was', 'were',
             'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will',
             'job', 'position', 'role', 'opportunity', 'vacancy'
         }
 
-
 def get_combined_insights(search_params=None):
     """Get all insights data in a single response with comprehensive validation and security"""
     try:
         query, selected_countries, selected_organizations, selected_sources, date_range = process_search_params(search_params)
-        
+
         # Build the base query for filtering - this will be used for ALL insights
         base_query = build_filtered_query(query, selected_countries, selected_organizations, selected_sources, date_range)
-        
+
         # Initialize response structure
         insights_data = {
             "overview": {
@@ -205,11 +251,13 @@ def get_combined_insights(search_params=None):
                 "words": []
             }
         }
-        
+
         # 1. GET OVERVIEW STATISTICS
         try:
             count_payload = {"query": base_query} if base_query != {"match_all": {}} else {}
-            
+            # Clean the payload using OpenSearch security engine
+            count_payload = sanitize_opensearch_query(count_payload)
+
             total_jobs_response = requests.get(
                 f"{OPENSEARCH_URL}/{INDEX_NAME}/_count",
                 auth=AUTH,
@@ -234,6 +282,9 @@ def get_combined_insights(search_params=None):
                     }
                 }
             }
+            # Clean the aggregation query
+            org_query = sanitize_opensearch_query(org_query)
+            org_query["aggs"] = validate_opensearch_aggregation(org_query.get("aggs", {}))
 
             org_response = requests.get(
                 f"{OPENSEARCH_URL}/{INDEX_NAME}/_search",
@@ -256,10 +307,10 @@ def get_combined_insights(search_params=None):
                 "total_organizations": int(total_organizations),
                 "avg_jobs_per_org": float(avg_jobs_per_org)
             }
-            
+
         except Exception as overview_error:
             log_security_event("OVERVIEW_INSIGHTS_ERROR", f"Error: {overview_error}")
-        
+
         # 2. GET JOBS PER DAY
         try:
             # Default to 365 days if no date range specified
@@ -304,6 +355,10 @@ def get_combined_insights(search_params=None):
                 }
             }
 
+            # Clean the query and aggregations
+            query_payload = sanitize_opensearch_query(query_payload)
+            query_payload["aggs"] = validate_opensearch_aggregation(query_payload.get("aggs", {}))
+
             response = requests.get(
                 f"{OPENSEARCH_URL}/{INDEX_NAME}/_search",
                 auth=AUTH,
@@ -336,14 +391,14 @@ def get_combined_insights(search_params=None):
                 }
             else:
                 log_security_event("OPENSEARCH_ERROR", f"Jobs per day query failed: {response.status_code}")
-                
+
         except Exception as jobs_per_day_error:
             log_security_event("JOBS_PER_DAY_ERROR", f"Error: {jobs_per_day_error}")
-        
+
         # 3. GET TOP COUNTRIES
         try:
             limit = 8  # Fixed limit for countries
-            
+
             query_payload = {
                 "size": 0,
                 "query": base_query,
@@ -357,6 +412,10 @@ def get_combined_insights(search_params=None):
                     }
                 }
             }
+
+            # Clean the query and aggregations
+            query_payload = sanitize_opensearch_query(query_payload)
+            query_payload["aggs"] = validate_opensearch_aggregation(query_payload.get("aggs", {}))
 
             response = requests.get(
                 f"{OPENSEARCH_URL}/{INDEX_NAME}/_search",
@@ -373,9 +432,16 @@ def get_combined_insights(search_params=None):
                 countries = []
                 counts = []
 
+                # Use unified sanitizer for country names
+                config = SanitizationConfig(
+                    max_length=50,
+                    security_level=SecurityLevel.MEDIUM,
+                    preserve_case=True
+                )
+
                 for bucket in buckets:
                     try:
-                        country = sanitize_input(bucket["key"], max_length=50)
+                        country = unified_sanitizer.sanitize(bucket["key"], config)
                         count = int(bucket["doc_count"])
                         if country and count > 0:
                             countries.append(country.title())
@@ -390,10 +456,10 @@ def get_combined_insights(search_params=None):
                 }
             else:
                 log_security_event("OPENSEARCH_ERROR", f"Top countries query failed: {response.status_code}")
-                
+
         except Exception as countries_error:
             log_security_event("TOP_COUNTRIES_ERROR", f"Error: {countries_error}")
-        
+
         # 4. GET WORD CLOUD DATA
         try:
             limit = 50  # Fixed limit for word cloud
@@ -406,6 +472,9 @@ def get_combined_insights(search_params=None):
                 "query": base_query
             }
 
+            # Clean the query
+            query_payload = sanitize_opensearch_query(query_payload)
+
             response = requests.get(
                 f"{OPENSEARCH_URL}/{INDEX_NAME}/_search",
                 auth=AUTH,
@@ -416,38 +485,47 @@ def get_combined_insights(search_params=None):
 
             if response.status_code == 200:
                 hits = response.json().get("hits", {}).get("hits", [])
-                
-                # Process text with security considerations
+
+                # Process text with security considerations using unified sanitizer
                 all_words = []
                 max_docs = min(len(hits), 5000)  # Process max 5000 documents
-                
+
+                # Configuration for text processing
+                text_config = SanitizationConfig(
+                    max_length=1000,
+                    security_level=SecurityLevel.MEDIUM,
+                    preserve_case=False,
+                    strip_whitespace=True
+                )
+
                 for i, hit in enumerate(hits[:max_docs]):
                     try:
                         source = hit.get('_source', {})
-                        title = sanitize_input(source.get('title', ''), max_length=200)
-                        description = sanitize_input(source.get('description', ''), max_length=1000)
-                        
+                        title = unified_sanitizer.sanitize(source.get('title', ''),
+                                                         SanitizationConfig(max_length=200, security_level=SecurityLevel.MEDIUM))
+                        description = unified_sanitizer.sanitize(source.get('description', ''), text_config)
+
                         text = f"{title} {description}"
-                        
+
                         # Clean and tokenize text
                         # Remove extra whitespace and normalize
                         text = re.sub(r'\s+', ' ', text.lower().strip())
-                        
+
                         # Remove punctuation but keep letters and spaces
                         cleaned = re.sub(r'[^\w\s]', ' ', text)
-                        
+
                         # Split into words
                         words = cleaned.split()
-                        
+
                         for word in words:
                             # Additional validation for each word
-                            if (len(word) > 2 and 
+                            if (len(word) > 2 and
                                 len(word) < 50 and  # Prevent extremely long words
-                                word not in stop_words and 
+                                word not in stop_words and
                                 word.isalpha() and
                                 not re.search(r'(script|javascript|eval|exec)', word, re.IGNORECASE)):
                                 all_words.append(word)
-                                
+
                     except Exception as word_error:
                         log_security_event("WORD_PROCESSING_ERROR", f"Error processing document {i}: {word_error}")
                         continue
@@ -457,13 +535,19 @@ def get_combined_insights(search_params=None):
                     word_counts = Counter(all_words)
                     most_common = word_counts.most_common(limit)
 
+                    word_config = SanitizationConfig(
+                        max_length=50,
+                        security_level=SecurityLevel.LOW,
+                        preserve_case=True
+                    )
+
                     insights_data["word_cloud"] = {
                         "words": [
                             {
-                                "text": sanitize_input(word.title(), max_length=50), 
+                                "text": unified_sanitizer.sanitize(word.title(), word_config),
                                 "count": int(count)
-                            } 
-                            for word, count in most_common 
+                            }
+                            for word, count in most_common
                             if word and count > 0
                         ]
                     }
@@ -472,7 +556,7 @@ def get_combined_insights(search_params=None):
 
             else:
                 log_security_event("OPENSEARCH_ERROR", f"Word cloud query failed: {response.status_code}")
-                
+
         except Exception as word_cloud_error:
             log_security_event("WORD_CLOUD_ERROR", f"Error: {word_cloud_error}")
 
@@ -499,38 +583,33 @@ def get_combined_insights(search_params=None):
             }
         }
 
-
 # Keep individual functions for backward compatibility if needed
 def get_insights_overview(search_params=None):
     """Get overview statistics with comprehensive validation"""
     combined_data = get_combined_insights(search_params)
     return combined_data["overview"]
 
-
 def get_jobs_per_day(search_params=None):
     """Get jobs posted per day with validation"""
     combined_data = get_combined_insights(search_params)
     return combined_data["jobs_per_day"]
-
 
 def get_top_countries(search_params=None, limit=8):
     """Get top countries by job count with validation"""
     combined_data = get_combined_insights(search_params)
     return combined_data["top_countries"]
 
-
 def get_word_cloud_data(search_params=None, limit=50):
     """Get word frequency data with comprehensive validation"""
     combined_data = get_combined_insights(search_params)
     return combined_data["word_cloud"]
-
 
 def get_organizations_insights(search_params=None):
     """Get organizations with job counts and last update dates"""
     try:
         query, selected_countries, selected_organizations, selected_sources, date_range = process_search_params(search_params)
         base_query = build_filtered_query(query, selected_countries, selected_organizations, selected_sources, date_range)
-        
+
         query_payload = {
             "size": 0,
             "query": base_query,
@@ -559,6 +638,10 @@ def get_organizations_insights(search_params=None):
             }
         }
 
+        # Clean the query and aggregations
+        query_payload = sanitize_opensearch_query(query_payload)
+        query_payload["aggs"] = validate_opensearch_aggregation(query_payload.get("aggs", {}))
+
         response = requests.get(
             f"{OPENSEARCH_URL}/{INDEX_NAME}/_search",
             auth=AUTH,
@@ -572,11 +655,25 @@ def get_organizations_insights(search_params=None):
             buckets = data.get("aggregations", {}).get("organizations", {}).get("buckets", [])
 
             organizations = []
+
+            # Configuration for organization data sanitization
+            org_config = SanitizationConfig(
+                max_length=200,
+                security_level=SecurityLevel.MEDIUM,
+                preserve_case=True
+            )
+
+            url_config = SanitizationConfig(
+                max_length=500,
+                security_level=SecurityLevel.HIGH,
+                preserve_case=True
+            )
+
             for bucket in buckets:
                 try:
-                    org_name = sanitize_input(bucket["key"], max_length=200)
+                    org_name = unified_sanitizer.sanitize(bucket["key"], org_config)
                     job_count = int(bucket["job_count"]["value"])
-                    
+
                     # Validate and sanitize last updated date
                     last_updated = None
                     if bucket["last_updated"]["value"]:
@@ -594,7 +691,7 @@ def get_organizations_insights(search_params=None):
                         if raw_url and isinstance(raw_url, str) and len(raw_url) < 500:
                             # Simple URL pattern check
                             if re.match(r'^https?://', raw_url):
-                                url_careers = sanitize_input(raw_url, max_length=500)
+                                url_careers = unified_sanitizer.sanitize(raw_url, url_config)
 
                     if org_name and job_count > 0:
                         organizations.append({
@@ -603,7 +700,7 @@ def get_organizations_insights(search_params=None):
                             "last_updated": last_updated,
                             "url_careers": url_careers
                         })
-                        
+
                 except Exception as org_error:
                     log_security_event("ORG_PROCESSING_ERROR", f"Error processing organization: {org_error}")
                     continue
