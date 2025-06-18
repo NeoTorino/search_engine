@@ -10,7 +10,7 @@ from security.middleware.rate_limiting import apply_rate_limit
 from security.middleware.request_validation import validate_request_security, validate_content_type
 from security.monitoring.detection import detect_bot_behavior
 from security.monitoring.logging import log_security_event
-from security.core import get_search_params
+from security.core.main import get_search_params
 from security.core.validators import check_request_security, security_validator, ValidationResult
 
 security_logger = logging.getLogger('security')

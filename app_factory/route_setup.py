@@ -1,7 +1,7 @@
 from routes.main_routes import main
 from routes.utility_routes import utility
 from routes.page_routes import pages
-from routes.search_routes import api
+from routes.search_routes import search
 
 def register_blueprints(app):
     """Register all application blueprints"""
