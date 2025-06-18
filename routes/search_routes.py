@@ -6,7 +6,7 @@ from services.search_service import search_jobs
 from services.insights_service import get_combined_insights, get_organizations_insights
 from lib.date_utils import get_date_range_days
 
-# Import your security modules
+from security.core.param_processor import process_search_parameters
 from security.middleware.decorators import (
     secure_endpoint, get_sanitized_param,
     get_validation_result, is_request_safe
@@ -45,56 +45,26 @@ def search_insights():
             security_logger.warning("Unsafe request blocked in combined_insights")
             return jsonify({"error": "Invalid request parameters"}), 400
 
-        # Get sanitized parameters directly
-        query = get_sanitized_param('q', '').strip()
+        # Process ALL parameters with business logic in one call
+        params = process_search_parameters()
 
-        # Handle countries (can be single or multiple)
-        countries_raw = get_sanitized_param('countries', get_sanitized_param('country', []))
-        if isinstance(countries_raw, str):
-            countries = [c.strip() for c in countries_raw.split(',') if c.strip()][:10]  # max 10
-        else:
-            countries = countries_raw[:10] if isinstance(countries_raw, list) else []
-
-        # Handle organizations
-        orgs_raw = get_sanitized_param('organizations', get_sanitized_param('organization', []))
-        if isinstance(orgs_raw, str):
-            organizations = [o.strip() for o in orgs_raw.split(',') if o.strip()][:10]  # max 10
-        else:
-            organizations = orgs_raw[:10] if isinstance(orgs_raw, list) else []
-
-        # Handle sources
-        sources_raw = get_sanitized_param('sources', get_sanitized_param('source', []))
-        if isinstance(sources_raw, str):
-            sources = [s.strip() for s in sources_raw.split(',') if s.strip()][:5]  # max 5
-        else:
-            sources = sources_raw[:5] if isinstance(sources_raw, list) else []
-
-        # Get numeric parameters with validation
-        try:
-            limit = min(int(get_sanitized_param('limit', 20)), 100)
-        except (ValueError, TypeError):
-            limit = 20
-
-        try:
-            offset = min(int(get_sanitized_param('offset', 0)), 10000)
-        except (ValueError, TypeError):
-            offset = 0
-
-        try:
-            date_posted_days = int(get_sanitized_param('date_posted_days', 365)) if get_sanitized_param('date_posted_days') else 365
-            if date_posted_days and date_posted_days < 0:
-                date_posted_days = 365
-        except (ValueError, TypeError):
-            date_posted_days = 365
+        # Extract processed parameters - no more manual processing needed!
+        query = params['q'].strip()
+        selected_countries = params['countries']  # Already processed as list, limited to 10
+        selected_organizations = params['organizations']  # Already processed as list, limited to 10
+        selected_sources = params['sources']  # Already processed as list, limited to 5
+        offset = params['offset']  # Already validated range 0-10000
+        limit = params['limit']  # try-catch validation + min(value, 100)
+        days = params['date_posted_days']  # Already handles negatives -> 365
 
         search_params = {
             'query': query,
-            'countries': countries,
-            'organizations': organizations,
-            'sources': sources,
+            'countries': selected_countries,
+            'organizations': selected_organizations,
+            'sources': selected_sources,
             'limit': limit,
             'offset': offset,
-            'date_posted_days': date_posted_days
+            'date_posted_days': days
         }
 
         # Log security validation results for debugging
@@ -141,43 +111,23 @@ def search_organizations():
             security_logger.warning("Unsafe request blocked in insights_organizations")
             return jsonify({"error": "Invalid request parameters"}), 400
 
-        # Get sanitized parameters directly
-        query = get_sanitized_param('q', '').strip()
+        # Process ALL parameters with business logic in one call
+        params = process_search_parameters()
 
-        # Handle countries (can be single or multiple)
-        countries_raw = get_sanitized_param('countries', get_sanitized_param('country', []))
-        if isinstance(countries_raw, str):
-            countries = [c.strip() for c in countries_raw.split(',') if c.strip()][:10]
-        else:
-            countries = countries_raw[:10] if isinstance(countries_raw, list) else []
-
-        # Handle organizations
-        orgs_raw = get_sanitized_param('organizations', get_sanitized_param('organization', []))
-        if isinstance(orgs_raw, str):
-            organizations = [o.strip() for o in orgs_raw.split(',') if o.strip()][:10]
-        else:
-            organizations = orgs_raw[:10] if isinstance(orgs_raw, list) else []
-
-        # Handle sources
-        sources_raw = get_sanitized_param('sources', get_sanitized_param('source', []))
-        if isinstance(sources_raw, str):
-            sources = [s.strip() for s in sources_raw.split(',') if s.strip()][:5]
-        else:
-            sources = sources_raw[:5] if isinstance(sources_raw, list) else []
-
-        try:
-            date_posted_days = int(get_sanitized_param('date_posted_days', 365)) if get_sanitized_param('date_posted_days') else 365
-            if date_posted_days and date_posted_days < 0:
-                date_posted_days = 365
-        except (ValueError, TypeError):
-            date_posted_days = 365
+        # Extract processed parameters - no more manual processing needed!
+        query = params['q'].strip()
+        selected_countries = params['countries']  # Already processed as list, limited to 10
+        selected_organizations = params['organizations']  # Already processed as list, limited to 10
+        selected_sources = params['sources']  # Already processed as list, limited to 5
+        offset = params['offset']  # Already validated range 0-10000
+        days = params['date_posted_days']  # Already handles negatives -> 365
 
         search_params = {
             'query': query,
-            'countries': countries,
-            'organizations': organizations,
-            'sources': sources,
-            'date_posted_days': date_posted_days
+            'countries': countrselected_countriesies,
+            'organizations': selected_organizations,
+            'sources': selected_sources,
+            'date_posted_days': days
         }
 
         data = get_organizations_insights(search_params)
@@ -212,42 +162,16 @@ def search_search():
             security_logger.warning("Unsafe request blocked in search_results")
             return jsonify({"error": "Invalid request parameters"}), 400
 
-        # Get sanitized parameters directly
-        query = get_sanitized_param('q', '').strip()
+        # Process ALL parameters with business logic in one call
+        params = process_search_parameters()
 
-        # Handle countries (can be single or multiple)
-        countries_raw = get_sanitized_param('countries', get_sanitized_param('country', []))
-        if isinstance(countries_raw, str):
-            selected_countries = [c.strip() for c in countries_raw.split(',') if c.strip()][:10]
-        else:
-            selected_countries = countries_raw[:10] if isinstance(countries_raw, list) else []
-
-        # Handle organizations
-        orgs_raw = get_sanitized_param('organizations', get_sanitized_param('organization', []))
-        if isinstance(orgs_raw, str):
-            selected_organizations = [o.strip() for o in orgs_raw.split(',') if o.strip()][:10]
-        else:
-            selected_organizations = orgs_raw[:10] if isinstance(orgs_raw, list) else []
-
-        # Handle sources
-        sources_raw = get_sanitized_param('sources', get_sanitized_param('source', []))
-        if isinstance(sources_raw, str):
-            selected_sources = [s.strip() for s in sources_raw.split(',') if s.strip()][:5]
-        else:
-            selected_sources = sources_raw[:5] if isinstance(sources_raw, list) else []
-
-        # Get numeric parameters with validation
-        try:
-            offset = min(int(get_sanitized_param('offset', 0)), 10000)
-        except (ValueError, TypeError):
-            offset = 0
-
-        try:
-            days = int(get_sanitized_param('date_posted_days', 365)) if get_sanitized_param('date_posted_days') else 365
-            if days and days < 0:
-                days = 365
-        except (ValueError, TypeError):
-            days = 365
+        # Extract processed parameters - no more manual processing needed!
+        query = params['q'].strip()
+        selected_countries = params['countries']  # Already processed as list, limited to 10
+        selected_organizations = params['organizations']  # Already processed as list, limited to 10
+        selected_sources = params['sources']  # Already processed as list, limited to 5
+        offset = params['offset']  # Already validated range 0-10000
+        days = params['date_posted_days']  # Already handles negatives -> 365
 
         # Additional security: validate query length (already handled by decorator but double-check)
         if len(query) > 200:
