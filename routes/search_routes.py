@@ -4,76 +4,71 @@ from flask import Blueprint, render_template, request, jsonify
 
 from services.search_service import search_jobs
 from services.insights_service import get_combined_insights, get_organizations_insights
+from services.filters_service import get_country_list, get_organization_list, get_source_list
+
 from lib.date_utils import get_date_range_days
 
-from security.core.param_processor import process_search_parameters
-from security.middleware.decorators import (
-    secure_endpoint, get_sanitized_param,
-    get_validation_result, is_request_safe
-)
+from utils.cache_store import cache
+
+from security.core.sanitizers import sanitize_element
 from security.monitoring import log_security_event
 
 search = Blueprint('search', __name__)
 security_logger = logging.getLogger('security')
 
-# Define validation config for your search endpoints
-SEARCH_VALIDATION_CONFIG = {
-    'q': {'type': 'search', 'max_length': 200},
-    'country': {'type': 'filter', 'max_length': 50},
-    'countries': {'type': 'filter', 'max_length': 500},  # Multiple countries
-    'organization': {'type': 'filter', 'max_length': 50},
-    'organizations': {'type': 'filter', 'max_length': 500},  # Multiple orgs
-    'source': {'type': 'filter', 'max_length': 50},
-    'sources': {'type': 'filter', 'max_length': 200},  # Multiple sources
-    'limit': {'type': 'general', 'max_length': 10},
-    'offset': {'type': 'general', 'max_length': 10},
-    'date_posted_days': {'type': 'general', 'max_length': 10}
-}
+
+CTY = cache.get_store_values('countries', get_country_list)
+ORG = cache.get_store_values('organizations', get_organization_list)
+SRC = cache.get_store_values('sources', get_source_list)
+
+
+def get_parameters()-> dict:
+    """
+    Main function to sanitize all GET parameters with enhanced security
+    Returns a dictionary with sanitized parameters
+    """
+    sanitized = {}
+
+    # Sanitize 'q' parameter (free text for search)
+    q = request.args.get('q', '')
+    sanitized['q'] = sanitize_element(q, limit=256)
+
+    # Sanitize 'country' parameter (list of predefined strings)
+    countries = request.args.getlist('country')
+    sanitized['country'] = sanitize_element(countries, valid_values=CTY, limit=10)
+
+    # Sanitize 'organization' parameter (list of predefined strings)
+    organizations = request.args.getlist('organization')
+    sanitized['organization'] = sanitize_element(organizations, valid_values=ORG, limit=20)
+
+    # Sanitize 'source' parameter (list of predefined strings)
+    sources = request.args.getlist('source')
+    sanitized['source'] = sanitize_element(sources, valid_values=SRC, limit=10)
+
+    # Sanitize 'date_posted_days' parameter with enhanced security
+    date_posted_days = request.args.get('date_posted_days', '365')
+    sanitized['date_posted_days'] = sanitize_element(date_posted_days, default_value=365, min_value=0, max_value=365, limit=3)
+    # Apply special rule: if > 30, set to 365
+    if sanitized['date_posted_days'] == 30 and date_posted_days and str(date_posted_days).strip().isdigit():
+        original_val = int(date_posted_days)
+        if original_val > 30:
+            sanitized['date_posted_days'] = 365
+
+    # Sanitize 'from' parameter with enhanced security
+    from_param = request.args.get('from', '0')
+    sanitized['offset'] = sanitize_element(from_param, default_value=0, min_value=0, max_value=10000, limit=5)
+
+    return sanitized
 
 @search.route("/insights")
-@secure_endpoint(
-    validation_config=SEARCH_VALIDATION_CONFIG,
-    auto_sanitize=True,
-    block_on_threat=True,
-    log_threats=True
-)
 def search_insights():
     """Get all insights data in a single response: overview, jobs per day, top countries, and word cloud"""
     try:
-        # Check if request passed security validation
-        if not is_request_safe():
-            security_logger.warning("Unsafe request blocked in combined_insights")
-            return jsonify({"error": "Invalid request parameters"}), 400
-
         # Process ALL parameters with business logic in one call
-        params = process_search_parameters()
-
-        # Extract processed parameters - no more manual processing needed!
-        query = params['q'].strip()
-        selected_countries = params['countries']  # Already processed as list, limited to 10
-        selected_organizations = params['organizations']  # Already processed as list, limited to 10
-        selected_sources = params['sources']  # Already processed as list, limited to 5
-        offset = params['offset']  # Already validated range 0-10000
-        limit = params['limit']  # try-catch validation + min(value, 100)
-        days = params['date_posted_days']  # Already handles negatives -> 365
-
-        search_params = {
-            'query': query,
-            'countries': selected_countries,
-            'organizations': selected_organizations,
-            'sources': selected_sources,
-            'limit': limit,
-            'offset': offset,
-            'date_posted_days': days
-        }
-
-        # Log security validation results for debugging
-        query_validation = get_validation_result('q')
-        if query_validation and query_validation.threats_detected:
-            security_logger.info("Query threats detected but sanitized: %s", query_validation.threats_detected)
+        params = get_parameters()
 
         # Get combined insights data
-        data = get_combined_insights(search_params)
+        data = get_combined_insights(params)
 
         # Validate response data before sending
         if not isinstance(data, dict):
@@ -97,40 +92,13 @@ def search_insights():
         return jsonify({"error": "Failed to load insights data"}), 500
 
 @search.route("/organizations")
-@secure_endpoint(
-    validation_config=SEARCH_VALIDATION_CONFIG,
-    auto_sanitize=True,
-    block_on_threat=True,
-    log_threats=True
-)
 def search_organizations():
     """Get organizations with job counts and last update dates"""
     try:
-        # Check if request passed security validation
-        if not is_request_safe():
-            security_logger.warning("Unsafe request blocked in insights_organizations")
-            return jsonify({"error": "Invalid request parameters"}), 400
-
         # Process ALL parameters with business logic in one call
-        params = process_search_parameters()
+        params = get_parameters()
 
-        # Extract processed parameters - no more manual processing needed!
-        query = params['q'].strip()
-        selected_countries = params['countries']  # Already processed as list, limited to 10
-        selected_organizations = params['organizations']  # Already processed as list, limited to 10
-        selected_sources = params['sources']  # Already processed as list, limited to 5
-        offset = params['offset']  # Already validated range 0-10000
-        days = params['date_posted_days']  # Already handles negatives -> 365
-
-        search_params = {
-            'query': query,
-            'countries': countrselected_countriesies,
-            'organizations': selected_organizations,
-            'sources': selected_sources,
-            'date_posted_days': days
-        }
-
-        data = get_organizations_insights(search_params)
+        data = get_organizations_insights(params)
 
         # Validate response data
         if not isinstance(data, (dict, list)):
@@ -148,38 +116,22 @@ def search_organizations():
         return jsonify({"error": "Failed to load organizations data"}), 500
 
 @search.route("/search")
-@secure_endpoint(
-    validation_config=SEARCH_VALIDATION_CONFIG,
-    auto_sanitize=True,
-    block_on_threat=True,
-    log_threats=True
-)
 def search_search():
     """Main search endpoint with comprehensive security"""
     try:
-        # Check if request passed security validation
-        if not is_request_safe():
-            security_logger.warning("Unsafe request blocked in search_results")
-            return jsonify({"error": "Invalid request parameters"}), 400
-
         # Process ALL parameters with business logic in one call
-        params = process_search_parameters()
+        params = get_parameters()
 
-        # Extract processed parameters - no more manual processing needed!
-        query = params['q'].strip()
+        # Extract processed parameters
+        query = params['q']
         selected_countries = params['countries']  # Already processed as list, limited to 10
         selected_organizations = params['organizations']  # Already processed as list, limited to 10
         selected_sources = params['sources']  # Already processed as list, limited to 5
         offset = params['offset']  # Already validated range 0-10000
         days = params['date_posted_days']  # Already handles negatives -> 365
 
-        # Additional security: validate query length (already handled by decorator but double-check)
-        if len(query) > 200:
-            security_logger.warning("Query too long: %d characters", len(query))
-            return jsonify({"error": "Query too long"}), 400
-
         # Check if query is empty for template rendering
-        is_empty_query = not bool(query.strip())
+        is_empty_query = not bool(query)
 
         # Convert days to date range (only if less than 31 days)
         date_range = None if days >= 31 else get_date_range_days(days)

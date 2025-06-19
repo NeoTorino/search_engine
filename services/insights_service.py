@@ -7,10 +7,6 @@ import requests
 
 # Updated imports to match your security module structure
 from security.core.validators import security_validator
-from security.core.sanitizers import (
-    unified_sanitizer, SanitizationConfig,
-    SecurityLevel, sanitize_search_query
-)
 from security.engines.opensearch import sanitize_opensearch_query, validate_opensearch_aggregation
 from security.monitoring.logging import log_security_event
 

@@ -59,43 +59,7 @@ def sanitize_opensearch_field_name(field_name):
 
     return field_name
 
-def sanitize_opensearch_value(value):
-    """Sanitize OpenSearch query values"""
-    if not isinstance(value, str):
-        return value
 
-    # Import sanitize_input from security module to avoid circular imports
-
-    # Remove script-related content
-    script_patterns = [
-        r'script\s*:', r'inline\s*:', r'source\s*:',
-        r'params\s*:', r'lang\s*:', r'file\s*:',
-        r'painless', r'groovy', r'expression'
-    ]
-
-    clean_value = value
-    for pattern in script_patterns:
-        clean_value = re.sub(pattern, '', clean_value, flags=re.IGNORECASE)
-
-    # Remove potential JSON injection
-    clean_value = re.sub(r'\{[^}]*script[^}]*\}', '', clean_value, flags=re.IGNORECASE)
-    clean_value = re.sub(r'\{[^}]*source[^}]*\}', '', clean_value, flags=re.IGNORECASE)
-
-    return sanitize_input(clean_value, max_length=1000)
-
-def _is_safe_opensearch_value(value):
-    """Check if value is safe for OpenSearch"""
-    if isinstance(value, str):
-        dangerous_patterns = [
-            r'script\s*:', r'inline\s*:', r'source\s*:',
-            r'_delete', r'_update', r'_bulk'
-        ]
-
-        for pattern in dangerous_patterns:
-            if re.search(pattern, value, flags=re.IGNORECASE):
-                return False
-
-    return True
 
 def validate_opensearch_aggregation(agg_dict):
     """Validate OpenSearch aggregation queries"""
