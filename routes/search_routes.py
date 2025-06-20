@@ -6,12 +6,9 @@ from services.search_service import search_jobs
 from services.insights_service import get_combined_insights, get_organizations_insights
 from services.filters_service import get_country_list, get_organization_list, get_source_list
 
-from lib.date_utils import get_date_range_days
-
+from utils.date_utils import get_date_range_days
 from utils.cache_store import cache
-
-from security.core.sanitizers import sanitize_element
-from security.monitoring import log_security_event
+from utils.sanitizers import sanitize_element
 
 search = Blueprint('search', __name__)
 security_logger = logging.getLogger('security')
@@ -31,32 +28,27 @@ def get_parameters()-> dict:
 
     # Sanitize 'q' parameter (free text for search)
     q = request.args.get('q', '')
-    sanitized['q'] = sanitize_element(q, limit=256)
+    sanitized['q'] = sanitize_element(q, limit=(0, 500))
 
     # Sanitize 'country' parameter (list of predefined strings)
     countries = request.args.getlist('country')
-    sanitized['country'] = sanitize_element(countries, valid_values=CTY, limit=10)
+    sanitized['countries'] = sanitize_element(countries, valid_values=CTY, limit=(20, 200))
 
     # Sanitize 'organization' parameter (list of predefined strings)
     organizations = request.args.getlist('organization')
-    sanitized['organization'] = sanitize_element(organizations, valid_values=ORG, limit=20)
+    sanitized['organizations'] = sanitize_element(organizations, valid_values=ORG, limit=(30, 500))
 
     # Sanitize 'source' parameter (list of predefined strings)
     sources = request.args.getlist('source')
-    sanitized['source'] = sanitize_element(sources, valid_values=SRC, limit=10)
+    sanitized['sources'] = sanitize_element(sources, valid_values=SRC, limit=(10, 200))
 
     # Sanitize 'date_posted_days' parameter with enhanced security
     date_posted_days = request.args.get('date_posted_days', '365')
-    sanitized['date_posted_days'] = sanitize_element(date_posted_days, default_value=365, min_value=0, max_value=365, limit=3)
-    # Apply special rule: if > 30, set to 365
-    if sanitized['date_posted_days'] == 30 and date_posted_days and str(date_posted_days).strip().isdigit():
-        original_val = int(date_posted_days)
-        if original_val > 30:
-            sanitized['date_posted_days'] = 365
+    sanitized['date_posted_days'] = sanitize_element(date_posted_days, default_value=365, min_value=0, max_value=365, limit=(0, 3))
 
     # Sanitize 'from' parameter with enhanced security
     from_param = request.args.get('from', '0')
-    sanitized['offset'] = sanitize_element(from_param, default_value=0, min_value=0, max_value=10000, limit=5)
+    sanitized['offset'] = sanitize_element(from_param, default_value=0, min_value=0, max_value=10000, limit=(0, 5))
 
     return sanitized
 
@@ -72,13 +64,11 @@ def search_insights():
 
         # Validate response data before sending
         if not isinstance(data, dict):
-            log_security_event("INVALID_RESPONSE_DATA", "Combined insights data is not a dictionary")
             return jsonify({"error": "Invalid response format"}), 500
 
         # Validate structure of combined response
         required_keys = ['overview', 'jobs_per_day', 'top_countries', 'word_cloud']
         if not all(key in data for key in required_keys):
-            log_security_event("INCOMPLETE_INSIGHTS_DATA", f"Missing keys in response: {set(required_keys) - set(data.keys())}")
             return jsonify({"error": "Incomplete insights data"}), 500
 
         return jsonify(data)
@@ -88,7 +78,6 @@ def search_insights():
         return jsonify({"error": "Invalid parameters"}), 400
     except Exception as e:
         security_logger.error("Error in combined insights: %s", e)
-        log_security_event("INSIGHTS_ERROR", f"Combined insights error: {e}")
         return jsonify({"error": "Failed to load insights data"}), 500
 
 @search.route("/organizations")
@@ -102,7 +91,6 @@ def search_organizations():
 
         # Validate response data
         if not isinstance(data, (dict, list)):
-            log_security_event("INVALID_RESPONSE_DATA", "Organizations data is invalid")
             return jsonify({"error": "Invalid response format"}), 500
 
         return jsonify(data)
@@ -112,7 +100,6 @@ def search_organizations():
         return jsonify({"error": "Invalid parameters"}), 400
     except Exception as e:
         security_logger.error("Error in organizations insights: %s", e)
-        log_security_event("INSIGHTS_ERROR", f"Organizations insights error: {e}")
         return jsonify({"error": "Failed to load organizations data"}), 500
 
 @search.route("/search")
@@ -124,11 +111,11 @@ def search_search():
 
         # Extract processed parameters
         query = params['q']
-        selected_countries = params['countries']  # Already processed as list, limited to 10
-        selected_organizations = params['organizations']  # Already processed as list, limited to 10
-        selected_sources = params['sources']  # Already processed as list, limited to 5
-        offset = params['offset']  # Already validated range 0-10000
-        days = params['date_posted_days']  # Already handles negatives -> 365
+        selected_countries = params['countries']
+        selected_organizations = params['organizations']
+        selected_sources = params['sources']
+        offset = params['offset']
+        days = params['date_posted_days']
 
         # Check if query is empty for template rendering
         is_empty_query = not bool(query)

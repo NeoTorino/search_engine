@@ -2,7 +2,7 @@ import os
 import logging
 import requests
 
-from security.core.sanitizers import sanitize_element
+from utils.sanitizers import sanitize_element
 
 OPENSEARCH_URL = "https://localhost:9200"
 INDEX_NAME = "jobs"
@@ -62,7 +62,7 @@ def parse_buckets(buckets):
     results = set()
     for bucket in buckets:
         raw_value = bucket.get("key", "")
-        clean_value = sanitize_element(raw_value)
+        clean_value = sanitize_element(element=raw_value)
         if clean_value:
             results.add(clean_value)
     return results

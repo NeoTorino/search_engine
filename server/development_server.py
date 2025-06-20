@@ -1,9 +1,9 @@
 import os
 import threading
 import socket
+import logging
 from flask import Flask, redirect
 from werkzeug.serving import make_server
-from security.monitoring.logging import security_monitor
 from .ssl_context import create_ssl_context
 
 class DevelopmentServer:
@@ -11,7 +11,11 @@ class DevelopmentServer:
 
     def __init__(self, app):
         self.app = app
-        self.security_logger = security_monitor.logger
+
+        # Use your defined loggers
+        self.general_logger = logging.getLogger('app.general')
+        self.security_logger = logging.getLogger('app.security')
+        self.error_logger = logging.getLogger('app.error')
 
     def run(self):
         """Run development server with optional HTTPS support"""
@@ -24,7 +28,7 @@ class DevelopmentServer:
         use_dev_https = os.getenv('DEV_HTTPS', 'False').lower() == 'true'
         force_https = os.getenv('FORCE_HTTPS', 'False').lower() == 'true'
 
-        self.security_logger.warning("Running in development mode - not suitable for production!")
+        self.general_logger.warning("Running in development mode - not suitable for production!")
 
         if use_dev_https:
             self._run_https_server(host, ssl_port, http_port, debug, force_https)
@@ -44,7 +48,7 @@ class DevelopmentServer:
         """Run HTTPS development server"""
         try:
             ssl_context = create_ssl_context()
-            self.security_logger.info("Starting development HTTPS server on %s:%s", host, ssl_port)
+            self.general_logger.info("Starting development HTTPS server on %s:%s", host, ssl_port)
 
             # Start HTTP redirect server if FORCE_HTTPS is enabled
             if force_https:
@@ -65,32 +69,32 @@ class DevelopmentServer:
                 threaded=True
             )
         except FileNotFoundError as e:
-            self.security_logger.error("SSL certificates not found: %s", e)
-            self.security_logger.info("Please generate certificates or set DEV_HTTPS=False")
-            self.security_logger.info(
+            self.error_logger.error("SSL certificates not found: %s", e)
+            self.general_logger.info("Please generate certificates or set DEV_HTTPS=False")
+            self.general_logger.info(
                 "To generate certificates: mkdir -p certs/development && "
                 "openssl req -x509 -newkey rsa:2048 -keyout certs/development/dev.key "
                 "-out certs/development/dev.crt -days 365 -nodes -subj '/CN=localhost'"
             )
             raise
         except Exception as e:
-            self.security_logger.error("Failed to start HTTPS server: %s", e)
+            self.error_logger.error("Failed to start HTTPS server: %s", e)
             raise
 
     def _run_http_server(self, host, http_port, debug):
         """Run HTTP development server"""
         if not self._is_port_available(host, http_port):
-            self.security_logger.error("Port %s is already in use. Please use a different port.", http_port)
+            self.error_logger.error("Port %s is already in use. Please use a different port.", http_port)
             # Try to find an available port
             for port in range(http_port + 1, http_port + 100):
                 if self._is_port_available(host, port):
-                    self.security_logger.info("Using available port %s instead", port)
+                    self.general_logger.info("Using available port %s instead", port)
                     http_port = port
                     break
             else:
                 raise OSError(f"No available ports found near {http_port}")
 
-        self.security_logger.info("Starting development HTTP server on %s:%s", host, http_port)
+        self.general_logger.info("Starting development HTTP server on %s:%s", host, http_port)
         self.app.run(
             host=host,
             port=http_port,
@@ -110,10 +114,10 @@ class DevelopmentServer:
 
             try:
                 redirect_server = make_server(host, http_port, redirect_app)
-                self.security_logger.info("HTTP redirect server running on %s:%s", host, http_port)
+                self.general_logger.info("HTTP redirect server running on %s:%s", host, http_port)
                 redirect_server.serve_forever()
             except Exception as e:
-                self.security_logger.error("HTTP redirect server failed: %s", e)
+                self.error_logger.error("HTTP redirect server failed: %s", e)
 
         redirect_thread = threading.Thread(target=run_redirect_server, daemon=True)
         redirect_thread.start()

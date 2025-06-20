@@ -1,9 +1,9 @@
 import os
 import threading
+import logging
 from flask import Flask, redirect
 from werkzeug.serving import make_server
 
-from security.monitoring.logging import security_monitor
 from .ssl_context import create_ssl_context
 
 class ProductionServer:
@@ -11,7 +11,11 @@ class ProductionServer:
 
     def __init__(self, app):
         self.app = app
-        self.security_logger = security_monitor.logger
+        # Use your defined loggers
+        self.general_logger = logging.getLogger('app.general')
+        self.security_logger = logging.getLogger('app.security')
+        self.error_logger = logging.getLogger('app.error')
+
         self._validate_production_requirements()
 
     def _validate_production_requirements(self):
@@ -24,14 +28,23 @@ class ProductionServer:
 
         missing_vars = [var for var in required_vars if not os.getenv(var)]
         if missing_vars:
-            raise ValueError(f"Missing required production environment variables: {missing_vars}")
+            error_msg = f"Missing required production environment variables: {missing_vars}"
+            self.error_logger.error(error_msg)
+            raise ValueError(error_msg)
 
         # Validate SSL certificates
         cert_path = os.getenv('CERT_PATH', './certs/entity/entity.crt')
         key_path = os.getenv('KEY_PATH', './certs/entity/entity.key')
 
-        if not os.path.exists(cert_path) or not os.path.exists(key_path):
-            raise FileNotFoundError("SSL certificates required for production")
+        if not os.path.exists(cert_path):
+            error_msg = f"SSL certificate file not found: {cert_path}"
+            self.error_logger.error(error_msg)
+            raise FileNotFoundError(error_msg)
+
+        if not os.path.exists(key_path):
+            error_msg = f"SSL private key file not found: {key_path}"
+            self.error_logger.error(error_msg)
+            raise FileNotFoundError(error_msg)
 
         self.security_logger.info("Production environment validation passed")
 
@@ -41,13 +54,14 @@ class ProductionServer:
         ssl_port = int(os.getenv('SSL_PORT', '443'))
         http_port = int(os.getenv('HTTP_PORT', '80'))
 
-        self.security_logger.info("Starting production server on %s:%s", host, ssl_port)
+        self.general_logger.info("Starting production HTTPS server on %s:%s", host, ssl_port)
 
         try:
             ssl_context = create_ssl_context()
 
             # Start HTTP redirect server if needed
             if os.getenv('FORCE_HTTPS', 'True').lower() == 'true':
+                self.general_logger.info("Starting HTTP redirect server on %s:%s", host, http_port)
                 self._start_http_redirect_server(host, http_port, ssl_port)
 
             # Run HTTPS server
@@ -61,8 +75,8 @@ class ProductionServer:
             )
 
         except Exception as e:
-            self.security_logger.error("Failed to start production server: %s", e)
-            raise
+            self.error_logger.error("Failed to start production server: %s", e)
+            raise ValueError(e)
 
     def _start_http_redirect_server(self, host, http_port, ssl_port):
         """Start HTTP redirect server in background"""
@@ -76,10 +90,10 @@ class ProductionServer:
 
             try:
                 redirect_server = make_server(host, http_port, redirect_app)
-                self.security_logger.info("HTTP redirect server running on %s:%s", host, http_port)
+                self.general_logger.info("HTTP redirect server started successfully")
                 redirect_server.serve_forever()
             except Exception as e:
-                self.security_logger.error("HTTP redirect server failed: %s", e)
+                self.error_logger.error("HTTP redirect server failed: %s", e)
 
         redirect_thread = threading.Thread(target=run_redirect_server, daemon=True)
         redirect_thread.start()

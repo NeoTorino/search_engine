@@ -23,5 +23,4 @@ if __name__ == '__main__':
     main()
 
 # Export for WSGI servers (gunicorn, uWSGI, etc.)
-application = create_app(get_config())
-app = application  # Backwards compatibility
+app = create_app(get_config())

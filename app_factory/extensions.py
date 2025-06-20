@@ -1,7 +1,6 @@
 import redis
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from security.monitoring.logging import security_monitor
 from security_config import setup_enhanced_logging
 
 # Global extension objects
@@ -22,14 +21,10 @@ def init_extensions(app):
     # Initialize rate limiter
     limiter = init_rate_limiter(app)
 
-    # Initialize security monitoring
-    security_monitor.init_app(app)
-
     return {
         'limiter': limiter,
         'security_logger': security_logger,
-        'redis_client': redis_client,
-        'security_monitor': security_monitor
+        'redis_client': redis_client
     }
 
 def init_redis(app):
@@ -66,6 +61,5 @@ def get_extensions():
     return {
         'limiter': limiter,
         'security_logger': security_logger,
-        'redis_client': redis_client,
-        'security_monitor': security_monitor
+        'redis_client': redis_client
     }

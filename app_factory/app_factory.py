@@ -1,10 +1,17 @@
 import os
+import warnings
 import urllib3
+
+os.environ['PYTHONWARNINGS'] = 'ignore:Unverified HTTPS request'
+urllib3.disable_warnings()
+warnings.filterwarnings('ignore', message='Unverified HTTPS request')
+
 from flask import Flask
 from dotenv import load_dotenv
 
+from utils.logging_config import setup_logging
+
 from filters.custom_filters import register_filters
-from security.monitoring.logging import security_monitor
 
 from .extensions import init_extensions
 from .middleware_setup import setup_middleware
@@ -14,14 +21,11 @@ from .route_setup import register_blueprints
 # Load environment
 load_dotenv(".env")
 
-# Suppress InsecureRequestWarning
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
 def create_app(config_class=None):
     """Flask application factory"""
 
-    # Setup enhanced logging first
-    security_logger = security_monitor.logger
+    log_level = config_class.LOG_LEVEL if config_class else 'INFO'
+    setup_logging(log_level=log_level)
 
     # Get the project root directory (one level up from app_factory)
     basedir = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
@@ -57,7 +61,5 @@ def create_app(config_class=None):
 
     # Register blueprints
     register_blueprints(app)
-
-    security_logger.info("Flask application created successfully")
 
     return app
