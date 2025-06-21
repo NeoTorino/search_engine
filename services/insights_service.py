@@ -16,11 +16,12 @@ def build_date_range_filter(date_posted_days):
     if not date_posted_days or not isinstance(date_posted_days, int):
         return None
 
-    if date_posted_days < 1 or date_posted_days > 365:
+    if date_posted_days < 1 or date_posted_days > 30:
+        # we return everything in the last year if date_posted is >30
         date_posted_days = 365
 
-    end_date = datetime.utcnow()
-    start_date = end_date - timedelta(days=date_posted_days)
+    end_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    start_date = (end_date - timedelta(days=date_posted_days)).replace(hour=0, minute=0, second=0, microsecond=0)
 
     return {
         "gte": start_date.isoformat(),
@@ -172,11 +173,9 @@ def get_combined_insights(search_params=None):
     url_count = f"{OPENSEARCH_URL}/{INDEX_NAME}/_count"
 
     # 1. GET OVERVIEW STATISTICS
-    count_payload = {"query": base_query} if base_query != {"match_all": {}} else {}
-    # Clean the payload using OpenSearch security engine
-    count_payload = sanitize_element(count_payload)
+    payload = {"query": base_query} if base_query != {"match_all": {}} else {}
 
-    total_jobs_response = requests.get(url=url_count, auth=AUTH, json=count_payload, verify=False, timeout=10)
+    total_jobs_response = requests.get(url=url_count, auth=AUTH, json=payload, verify=False, timeout=10)
 
     total_jobs = 0
     if total_jobs_response.status_code == 200:

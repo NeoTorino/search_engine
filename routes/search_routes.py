@@ -62,6 +62,7 @@ def search_insights():
         # Get combined insights data
         data = get_combined_insights(params)
 
+        print(data)
         # Validate response data before sending
         if not isinstance(data, dict):
             return jsonify({"error": "Invalid response format"}), 500

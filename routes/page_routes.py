@@ -7,14 +7,3 @@ pages = Blueprint('pages', __name__)
 def about():
     return render_template("about.html", time=time)
 
-@pages.route("/organizations")
-def organizations():
-    return render_template("organizations.html", time=time)
-
-@pages.route("/sources")
-def sources():
-    return render_template("sources.html", time=time)
-
-@pages.route("/insights")
-def stats():
-    return render_template("insights.html", time=time)
