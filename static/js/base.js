@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   let currentQuery = '';
   let filtersVisible = false; // Track filter visibility state
+  let filterUpdateTimeout = null; // Debounce the AJAX calls
 
   $('.selectpicker').selectpicker();
 
@@ -146,119 +147,83 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Function to update country counts in Bootstrap Select
-  function updateCountryCounts(countryCounts) {
-    const countrySelect = $('#country-select');
-    if (countrySelect.length && countryCounts && Object.keys(countryCounts).length > 0) {
+function updateCountryCounts(countryCounts) {
+  const countrySelect = $('#country-select');
+  if (countrySelect.length && countryCounts && Object.keys(countryCounts).length > 0) {
+    // Get currently selected values
+    const selectedValues = countrySelect.val() || [];
 
-      // Get currently selected values
-      const selectedValues = countrySelect.val() || [];
+    // Destroy and recreate the selectpicker to avoid conflicts
+    countrySelect.selectpicker('destroy');
 
-      // Destroy the selectpicker first
-      countrySelect.selectpicker('destroy');
+    // Clear all existing options
+    countrySelect.empty();
 
-      // Clear existing options
-      countrySelect.empty();
+    // Add new options
+    Object.entries(countryCounts).forEach(([country, count]) => {
+      const option = $('<option></option>')
+        .attr('value', country)
+        .text(`${country} (${count})`);
 
-      // Add new options with updated counts
-      Object.entries(countryCounts).forEach(([country, count]) => {
-        const option = $('<option></option>')
-          .attr('value', country)
-          .text(`${country} (${count})`);
+      if (selectedValues.includes(country)) {
+        option.attr('selected', 'selected');
+      }
 
-        // Maintain selection state
-        if (selectedValues.includes(country)) {
-          option.attr('selected', 'selected');
-        }
+      countrySelect.append(option);
+    });
 
-        countrySelect.append(option);
-      });
-
-      // Reinitialize selectpicker with the same options as before
-      countrySelect.selectpicker({
-        width: '100%',
-        liveSearch: true,
-        actionsBox: true,
-        title: 'All Countries'
-      });
-    }
+    // Reinitialize selectpicker
+    countrySelect.selectpicker();
   }
+}
 
-  // Function to update organization counts in Bootstrap Select
-  function updateOrganizationCounts(organizationCounts) {
-    const organizationSelect = $('#organization-select');
-    if (organizationSelect.length && organizationCounts && Object.keys(organizationCounts).length > 0) {
+function updateOrganizationCounts(organizationCounts) {
+  const organizationSelect = $('#organization-select');
+  if (organizationSelect.length && organizationCounts && Object.keys(organizationCounts).length > 0) {
+    const selectedValues = organizationSelect.val() || [];
 
-      // Get currently selected values
-      const selectedValues = organizationSelect.val() || [];
+    organizationSelect.selectpicker('destroy');
+    organizationSelect.empty();
 
-      // Destroy the selectpicker first
-      organizationSelect.selectpicker('destroy');
+    Object.entries(organizationCounts).forEach(([organization, count]) => {
+      const option = $('<option></option>')
+        .attr('value', organization)
+        .text(`${organization} (${count})`);
 
-      // Clear existing options
-      organizationSelect.empty();
+      if (selectedValues.includes(organization)) {
+        option.attr('selected', 'selected');
+      }
 
-      // Add new options with updated counts
-      Object.entries(organizationCounts).forEach(([organization, count]) => {
-        const option = $('<option></option>')
-          .attr('value', organization)
-          .text(`${organization} (${count})`);
+      organizationSelect.append(option);
+    });
 
-        // Maintain selection state
-        if (selectedValues.includes(organization)) {
-          option.attr('selected', 'selected');
-        }
-
-        organizationSelect.append(option);
-      });
-
-      // Reinitialize selectpicker with the same options as before
-      organizationSelect.selectpicker({
-        width: '100%',
-        liveSearch: true,
-        actionsBox: true,
-        title: 'All Organizations'
-      });
-    }
+    organizationSelect.selectpicker();
   }
+}
 
-  // Function to update source counts in Bootstrap Select
-  function updateSourceCounts(sourceCounts) {
-    const sourceSelect = $('#source-select');
-    if (sourceSelect.length && sourceCounts && Object.keys(sourceCounts).length > 0) {
+function updateSourceCounts(sourceCounts) {
+  const sourceSelect = $('#source-select');
+  if (sourceSelect.length && sourceCounts && Object.keys(sourceCounts).length > 0) {
+    const selectedValues = sourceSelect.val() || [];
 
-      // Get currently selected values
-      const selectedValues = sourceSelect.val() || [];
+    sourceSelect.selectpicker('destroy');
+    sourceSelect.empty();
 
-      // Destroy the selectpicker first
-      sourceSelect.selectpicker('destroy');
+    Object.entries(sourceCounts).forEach(([source, count]) => {
+      const option = $('<option></option>')
+        .attr('value', source)
+        .text(`${source} (${count})`);
 
-      // Clear existing options
-      sourceSelect.empty();
+      if (selectedValues.includes(source)) {
+        option.attr('selected', 'selected');
+      }
 
-      // Add new options with updated counts
-      Object.entries(sourceCounts).forEach(([source, count]) => {
-        const option = $('<option></option>')
-          .attr('value', source)
-          .text(`${source} (${count})`);
+      sourceSelect.append(option);
+    });
 
-        // Maintain selection state
-        if (selectedValues.includes(source)) {
-          option.attr('selected', 'selected');
-        }
-
-        sourceSelect.append(option);
-      });
-
-      // Reinitialize selectpicker with the same options as before
-      sourceSelect.selectpicker({
-        width: '100%',
-        liveSearch: true,
-        actionsBox: true,
-        title: 'All Sources'
-      });
-    }
+    sourceSelect.selectpicker();
   }
+}
 
   // Function to reset load more button to initial state
   function resetLoadMoreButton() {
@@ -353,41 +318,49 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   window.fetchFilteredResults = function(queryParams) {
-    // Reset load more button before fetching new results
-    resetLoadMoreButton();
+  // Reset load more button before fetching new results
+  resetLoadMoreButton();
 
-    const url = `/search?${queryParams}`;
-    fetchWithSecurity(url)
-      .then(response => {
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          return response.json();
-        } else {
-          return response.text().then(html => ({ html }));
-        }
-      })
-      .then(data => {
-        // Update metadata FIRST if it's a JSON response (before replacing HTML)
-        if (data.total_results !== undefined) {
-          updateResultsCount(data.total_results, data.query);
-          updateCountryCounts(data.country_counts || {});
-          updateOrganizationCounts(data.organization_counts || {});
-          updateSourceCounts(data.source_counts || {});
-          updateLoadMoreButton(data.show_load_more, 12, data.query);
-        }
+  // TEMPORARILY REMOVE EVENT LISTENERS before updating dropdowns
+  $('#country-select, #organization-select, #source-select').off('hidden.bs.select.customFilter');
 
-        // Then update the results container HTML
-        const resultsContainer = document.getElementById('results-container');
-        if (resultsContainer) {
-          resultsContainer.innerHTML = data.html;
-        }
-      })
-      .catch(error => {
-        console.error('Error fetching filtered results:', error);
-      });
+  const url = `/search?${queryParams}`;
+  fetchWithSecurity(url)
+    .then(response => {
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        return response.json();
+      } else {
+        return response.text().then(html => ({ html }));
+      }
+    })
+    .then(data => {
+      // Update metadata FIRST if it's a JSON response (before replacing HTML)
+      if (data.total_results !== undefined) {
+        updateResultsCount(data.total_results, data.query);
+        updateCountryCounts(data.country_counts || {});
+        updateOrganizationCounts(data.organization_counts || {});
+        updateSourceCounts(data.source_counts || {});
+        updateLoadMoreButton(data.show_load_more, 12, data.query);
+      }
 
-    refreshActiveTab();
-  };
+      // Then update the results container HTML
+      const resultsContainer = document.getElementById('results-container');
+      if (resultsContainer) {
+        resultsContainer.innerHTML = data.html;
+      }
+
+      // RE-ATTACH EVENT LISTENERS after updating dropdowns
+      attachDropdownListeners();
+    })
+    .catch(error => {
+      console.error('Error fetching filtered results:', error);
+      // Re-attach listeners even on error
+      attachDropdownListeners();
+    });
+
+  refreshActiveTab();
+};
 
   const slider = document.getElementById('date-slider');
   const label = document.getElementById('date-slider-label');
@@ -409,9 +382,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateLabelAndColor(slider.value);
 
-    // Only update label on input, don't trigger search
+    // Update label on input
     slider.addEventListener('input', (e) => {
       updateLabelAndColor(e.target.value);
+    });
+
+    // Trigger AJAX call when slider value changes (on mouseup/touchend)
+    slider.addEventListener('change', (e) => {
+      // Get current search query
+      const queryInput = document.querySelector('input[name="q"]');
+      const rawQuery = queryInput ? queryInput.value.trim() : '';
+      const query = sanitizeInput(rawQuery);
+      currentQuery = query;
+
+      // Get the form and create parameters with all current filter values
+      const form = document.getElementById('search-form');
+      if (form) {
+        const formData = new FormData(form);
+        formData.set('q', currentQuery);
+        const params = new URLSearchParams(formData);
+        fetchFilteredResults(params.toString());
+      }
+
+      handleFilterUpdate();
     });
   }
 
@@ -450,11 +443,49 @@ document.addEventListener('DOMContentLoaded', () => {
   window.getCurrentSearchParams = getCurrentSearchParams;
   window.toggleFilters = toggleFilters;
 
+function attachDropdownListeners() {
+  // Remove any existing listeners first
+  $('#country-select, #organization-select, #source-select').off('hidden.bs.select.customFilter');
+
+  // Add event listeners for when dropdowns are closed
+  $('#country-select, #organization-select, #source-select').on('hidden.bs.select.customFilter', function() {
+    console.log('Dropdown closed:', this.id);
+
+    // Clear any existing timeout
+    if (filterUpdateTimeout) {
+      clearTimeout(filterUpdateTimeout);
+    }
+
+    // Set a new timeout to debounce multiple rapid calls
+    filterUpdateTimeout = setTimeout(() => {
+      // Get current search query
+      const queryInput = document.querySelector('input[name="q"]');
+      const rawQuery = queryInput ? queryInput.value.trim() : '';
+      const query = sanitizeInput(rawQuery);
+      currentQuery = query;
+
+      // Get the form and create parameters with all current filter values
+      const form = document.getElementById('search-form');
+      if (form) {
+        const formData = new FormData(form);
+        formData.set('q', currentQuery);
+        const params = new URLSearchParams(formData);
+        fetchFilteredResults(params.toString());
+      }
+
+      handleFilterUpdate();
+    }, 300); // Wait 300ms before making the call
+  });
+}
+
   $(document).ready(function() {
-    // Initialize selectpickers but don't add change listeners
+    // Initialize selectpickers
     $('#country-select').selectpicker();
     $('#organization-select').selectpicker();
     $('#source-select').selectpicker();
+
+    // Attach initial listeners
+    attachDropdownListeners();
   });
 
   // Handle Load More functionality
@@ -606,39 +637,39 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Toggle filters button NOT found');
   }
 
-  // Handle Update Filters button - This is the ONLY place filters should update
-  const updateButton = document.getElementById('update-filters');
-  if (updateButton) {
-    updateButton.addEventListener('click', function(e) {
-      e.preventDefault();
+  // Handle Update Filters button
+  // const updateButton = document.getElementById('update-filters');
+  // if (updateButton) {
+  //   updateButton.addEventListener('click', function(e) {
+  //     e.preventDefault();
 
-      // Get current search query
-      const queryInput = document.querySelector('input[name="q"]');
-      const rawQuery = queryInput ? queryInput.value.trim() : '';
-      const query = sanitizeInput(rawQuery);
-      currentQuery = query;
+  //     // Get current search query
+  //     const queryInput = document.querySelector('input[name="q"]');
+  //     const rawQuery = queryInput ? queryInput.value.trim() : '';
+  //     const query = sanitizeInput(rawQuery);
+  //     currentQuery = query;
 
-      // Get the form and create parameters with all current filter values
-      const form = document.getElementById('search-form');
-      if (form) {
-        const formData = new FormData(form);
-        formData.set('q', currentQuery); // Ensure sanitized query is sent
+  //     // Get the form and create parameters with all current filter values
+  //     const form = document.getElementById('search-form');
+  //     if (form) {
+  //       const formData = new FormData(form);
+  //       formData.set('q', currentQuery); // Ensure sanitized query is sent
 
-        // Log the form data for debugging
-        console.log('Form data being sent:');
-        for (let [key, value] of formData.entries()) {
-          console.log(`${key}: ${value}`);
-        }
+  //       // Log the form data for debugging
+  //       console.log('Form data being sent:');
+  //       for (let [key, value] of formData.entries()) {
+  //         console.log(`${key}: ${value}`);
+  //       }
 
-        const params = new URLSearchParams(formData);
-        console.log('URL params:', params.toString());
+  //       const params = new URLSearchParams(formData);
+  //       console.log('URL params:', params.toString());
 
-        fetchFilteredResults(params.toString());
-      }
+  //       fetchFilteredResults(params.toString());
+  //     }
 
-      handleFilterUpdate();
-    });
-  }
+  //     handleFilterUpdate();
+  //   });
+  // }
 
   // Handle "Reset Filters" button
   const resetButton = document.getElementById('reset-filters');
