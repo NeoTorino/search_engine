@@ -1,3 +1,6 @@
+import re
+from datetime import datetime
+
 def calculate_depth(obj, max_iterations=1000):
     """
     Calculate the maximum depth of a nested list or dictionary with iteration limit.
@@ -99,4 +102,69 @@ def is_numeric_string(s):
         float(s)
         return True
     except (ValueError, OverflowError):
+        return False
+
+def is_valid_date_format(date_string):
+    """
+    Check if a string is a valid date in YYYY-MM-DD format.
+
+    This function validates both the format and the actual date values:
+    - Must be exactly 10 characters long
+    - Must match YYYY-MM-DD pattern with hyphens
+    - Year must be 4 digits
+    - Month must be 01-12
+    - Day must be valid for the given month/year
+
+    Args:
+        date_string (str): The string to validate
+
+    Returns:
+        bool: True if valid YYYY-MM-DD date, False otherwise
+
+    Examples:
+        is_valid_date_format("2025-05-01")  # True
+        is_valid_date_format("2025-13-01")  # False (invalid month)
+        is_valid_date_format("2025-02-30")  # False (invalid day for February)
+        is_valid_date_format("25-05-01")    # False (year not 4 digits)
+        is_valid_date_format("2025/05/01")  # False (wrong separator)
+        is_valid_date_format(" 2025-05-01") # False (leading space)
+    """
+    # Type check
+    if not isinstance(date_string, str):
+        return False
+
+    # Length check - must be exactly 10 characters
+    if len(date_string) != 10:
+        return False
+
+    # Pattern check - must match YYYY-MM-DD exactly
+    pattern = r'^(\d{4})-(\d{2})-(\d{2})$'
+    match = re.match(pattern, date_string)
+
+    if not match:
+        return False
+
+    # Extract components
+    year_str, month_str, day_str = match.groups()
+
+    try:
+        # Convert to integers
+        year = int(year_str)
+        month = int(month_str)
+        day = int(day_str)
+
+        # Basic range checks
+        if year < 1 or year > 9999:
+            return False
+        if month < 1 or month > 12:
+            return False
+        if day < 1 or day > 31:
+            return False
+
+        # Use datetime to validate the actual date
+        # This will catch invalid dates like Feb 30, Apr 31, etc.
+        datetime(year, month, day)
+        return True
+
+    except (ValueError, TypeError):
         return False

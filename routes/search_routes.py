@@ -44,7 +44,10 @@ def get_parameters()-> dict:
 
     # Sanitize 'date_posted_days' parameter with enhanced security
     date_posted_days = request.args.get('date_posted_days', '365')
-    sanitized['date_posted_days'] = sanitize_element(date_posted_days, default_value=365, min_value=0, max_value=365, limit=(0, 3))
+    clean_date_posted = sanitize_element(date_posted_days, default_value=365, min_value=0, max_value=31, limit=(0, 2))
+    if clean_date_posted and clean_date_posted > 30 or date_posted_days < 0:
+        clean_date_posted = 365 # Default is 1 year
+    sanitized['date_posted_days'] = clean_date_posted
 
     # Sanitize 'from' parameter with enhanced security
     from_param = request.args.get('from', '0')

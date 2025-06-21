@@ -41,7 +41,7 @@ import unicodedata
 import ipaddress
 import urllib.parse
 
-from utils.utils import calculate_depth, is_numeric_string
+from utils.general_utils import calculate_depth, is_numeric_string, is_valid_date_format
 
 MAX_DEPTH = 3
 LIMIT_ITER = 150
@@ -315,8 +315,13 @@ def sanitize_string(raw_element, limit=LIMIT_STR):
         text = text.replace(char, '')
 
     # Special characters that need removal
-    opensearch_special = r'[+\-=|><!~:\\\/]'
-    text = re.sub(opensearch_special, ' ', text)
+    if not is_valid_date_format(text):
+        # if string is date in the format YYYY-MM-DD, it will remove the hyphen
+        opensearch_special = r'[+\-=|><!~:\\\/]'
+        text = re.sub(opensearch_special, ' ', text)
+    else:
+        opensearch_special = r'[+=|><!~:\\\/]'
+        text = re.sub(opensearch_special, ' ', text)
 
     # Enhanced SQL injection pattern removal
     sql_patterns = [

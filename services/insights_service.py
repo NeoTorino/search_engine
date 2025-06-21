@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import requests
 
 from utils.sanitizers import sanitize_element
+from utils.general_utils import is_valid_date_format
 
 OPENSEARCH_URL = "https://localhost:9200"
 INDEX_NAME = "jobs"
@@ -39,7 +40,7 @@ def process_search_params(search_params):
     if search_params and isinstance(search_params, dict):
 
         # Validate and sanitize query
-        raw_query = search_params.get('query', '').strip()
+        raw_query = search_params.get('q', '').strip()
         if raw_query:
             clean_query = sanitize_element(element=raw_query, default_value='')
 
@@ -133,7 +134,6 @@ def load_stop_words():
             ])
             return stop_words
     except Exception as e:
-        log_security_event("STOP_WORDS_LOAD_ERROR", f"Error: {e}")
         # Fallback to basic stop words
         return {
             'and', 'or', 'the', 'a', 'an', 'in', 'on', 'at', 'to', 'for',
@@ -258,7 +258,7 @@ def get_combined_insights(search_params=None):
         for bucket in buckets:
             raw_date_str = bucket.get("key_as_string", None)
             if raw_date_str:
-                clean_date_str = sanitize_element(raw_date_str)
+                clean_date_str = raw_date_str if is_valid_date_format(raw_date_str) else sanitize_element(raw_date_str)
                 if clean_date_str:
                     doc_count = bucket.get("doc_count", 0)
                     if doc_count and isinstance(doc_count, int) and doc_count >0:
