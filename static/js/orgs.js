@@ -39,6 +39,10 @@ function setupSortingHeaders() {
         </div>
     `;
 
+    // New headers for the action columns (non-sortable)
+    headers[3].innerHTML = `<span>Careers Page</span>`;
+    headers[4].innerHTML = `<span>View Jobs</span>`;
+
     // Add event listeners for sorting
     document.getElementById('sort-header-name').addEventListener('click', () => sortTable('name'));
     document.getElementById('sort-header-jobs').addEventListener('click', () => sortTable('jobs'));
@@ -119,6 +123,27 @@ function updateSortIndicators() {
     }
 }
 
+// Function to navigate to search with organization filter
+function viewJobsByOrganization(organizationName) {
+    // Get current search query
+    const currentQuery = new URLSearchParams(window.location.search).get('q') || '';
+
+    // Build the new URL with the organization filter
+    const params = new URLSearchParams();
+
+    // Keep the current search query if it exists
+    if (currentQuery) {
+        params.set('q', currentQuery);
+    }
+
+    // Add the organization filter
+    params.set('organization', organizationName);
+
+    // Navigate to search page with filters and switch to results tab
+    const newUrl = `/search?${params.toString()}`;
+    window.location.href = newUrl;
+}
+
 // Load organizations table
 async function loadOrganizations(searchParams = '') {
     try {
@@ -131,7 +156,7 @@ async function loadOrganizations(searchParams = '') {
     } catch (error) {
         console.error('Error loading organizations:', error);
         document.getElementById('orgsTableBody').innerHTML =
-            '<tr><td colspan="3" class="text-center"><div class="error-message">Error loading organizations</div></td></tr>';
+            '<tr><td colspan="5" class="text-center"><div class="error-message">Error loading organizations</div></td></tr>';
     }
 }
 
@@ -140,36 +165,40 @@ function renderOrganizationsTable(organizations) {
     const tbody = document.getElementById('orgsTableBody');
 
     if (organizations.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" class="text-center">No organizations found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center">No organizations found</td></tr>';
         return;
     }
 
     tbody.innerHTML = organizations
         .filter(org => org.name && org.last_updated) // Skip rows with missing name or last_updated
         .map(org => {
-            const url = org.url_careers || '#';
+            const careersUrl = org.url_careers || '#';
             const name = org.name;
             const jobCount = org.job_count || 0;
             const lastUpdated = formatDate(org.last_updated);
 
+            // Create careers page link
+            const careersLink = careersUrl !== '#'
+                ? `<a href="${careersUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-primary btn-sm">
+                     <i class="fas fa-external-link-alt me-1"></i>Visit Careers
+                   </a>`
+                : '<span class="text-muted">N/A</span>';
+
+            // Create view jobs button
+            const viewJobsButton = `<button type="button" class="btn btn-outline-success btn-sm" onclick="viewJobsByOrganization('${name.replace(/'/g, "\\'")}')">
+                                      <i class="fas fa-search me-1"></i>View Jobs
+                                    </button>`;
+
             return `
-                <tr class="clickable-row" data-href="${url}" style="cursor: pointer;">
+                <tr>
                     <td><strong>${name}</strong></td>
-                    <td><span>${jobCount}</span></td>
-                    <td>${lastUpdated}</td>
+                    <td class="text-center"><span class="job-count-badge">${jobCount}</span></td>
+                    <td class="text-center">${lastUpdated}</td>
+                    <td class="text-center">${careersLink}</td>
+                    <td class="text-center">${viewJobsButton}</td>
                 </tr>
             `;
         }).join('');
-
-    // Attach click event listeners after rendering
-    document.querySelectorAll('.clickable-row').forEach(row => {
-        row.addEventListener('click', () => {
-            const href = row.getAttribute('data-href');
-            if (href && href !== '#') {
-                window.open(href, '_blank');
-            }
-        });
-    });
 }
 
 // Filter organizations
@@ -196,7 +225,7 @@ function filterOrganizations() {
                     break;
                 case 'date':
                     valueA = new Date(a.last_updated || 0);
-                    valueB = new Date(b.last_updated || 0);
+                    valueB = b.last_updated || 0;
                     break;
             }
 

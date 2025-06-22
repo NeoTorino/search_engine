@@ -432,13 +432,13 @@ def get_organizations_insights(search_params=None):
                     job_count = bucket.get("job_count", {}).get("value", 0)
 
             # Validate and sanitize last updated date
-            last_updated = None
+            clean_last_updated = None
             value = bucket.get("last_updated", {}).get("value", None)
             if value:
-                last_updated = bucket.get("last_updated", {}).get("value_as_string", None)
+                raw_last_updated = bucket.get("last_updated", {}).get("value_as_string", None)
                 # Basic date validation
-                if last_updated and len(last_updated) > 50:  # Prevent excessively long dates
-                    last_updated = last_updated[:50]
+                if raw_last_updated :
+                    clean_last_updated = sanitize_element(raw_last_updated)
 
             # Extract and validate URL
             url_careers_buckets = bucket.get("url_careers", {}).get("buckets", [])
@@ -447,7 +447,7 @@ def get_organizations_insights(search_params=None):
                 raw_url = url_careers_buckets[0].get("key", None)
                 # Basic URL validation
                 if raw_url:
-                    clean_url = sanitize_element(element=raw_url, default_value=None, limit=(0, 500))
+                    clean_url = sanitize_element(element=raw_url, default_value=None, limit=(0, 500), hint='url')
                     if clean_url and isinstance(clean_url, str) and len(clean_url) < 500:
                     # Simple URL pattern check
                         if re.match(r'^https?://', clean_url):
@@ -457,7 +457,7 @@ def get_organizations_insights(search_params=None):
                 organizations.append({
                     "name": clean_org_name,
                     "job_count": job_count,
-                    "last_updated": last_updated,
+                    "last_updated": clean_last_updated,
                     "url_careers": url_careers
                 })
 

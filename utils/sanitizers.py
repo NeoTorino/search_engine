@@ -48,7 +48,14 @@ LIMIT_ITER = 150
 LIMIT_STR = 500
 LIMIT_NUM = 20
 
-def sanitize_element(element, default_value=None, valid_keys=None, valid_values=None, min_value=None, max_value=None, limit=(LIMIT_ITER, LIMIT_STR)):
+def sanitize_element(element,
+                    default_value=None,
+                    valid_keys=None,
+                    valid_values=None,
+                    min_value=None,
+                    max_value=None,
+                    limit=(LIMIT_ITER, LIMIT_STR),
+                    hint=None):
     """
     Sanitize an input element based on its type and specified criteria.
 
@@ -87,28 +94,28 @@ def sanitize_element(element, default_value=None, valid_keys=None, valid_values=
 
     # Handle numeric types first (including string representations of numbers)
     if isinstance(element, (int, float)):
-        clean_value = sanitize_number(element, default_value=default_value, min_value=min_value, max_value=max_value, limit=limit[1])
+        clean_value = sanitize_number(element, default_value=default_value, min_value=min_value, max_value=max_value, limit=limit[1], hint=hint)
     elif isinstance(element, str):
         # Check if this string should be treated as a number
         if is_numeric_string(element):
-            clean_value = sanitize_number(element, default_value=default_value, min_value=min_value, max_value=max_value, limit=limit[1])
+            clean_value = sanitize_number(element, default_value=default_value, min_value=min_value, max_value=max_value, limit=limit[1], hint=hint)
         else:
-            clean_value = sanitize_string(element, limit=limit[1])
+            clean_value = sanitize_string(element, limit=limit[1], hint=hint)
     elif isinstance(element, dict):
-        clean_value = sanitize_dict(element, valid_keys=valid_keys, valid_values=valid_values, limit=limit)
+        clean_value = sanitize_dict(element, valid_keys=valid_keys, valid_values=valid_values, limit=limit, hint=hint)
     elif isinstance(element, list):
-        clean_value = sanitize_list(element, valid_values=valid_values, limit=limit)
+        clean_value = sanitize_list(element, valid_values=valid_values, limit=limit, hint=hint)
     elif isinstance(element, tuple):
-        clean_value = sanitize_tuple(element, valid_values=valid_values, limit=limit)
+        clean_value = sanitize_tuple(element, valid_values=valid_values, limit=limit, hint=hint)
     elif isinstance(element, set):
-        clean_value = sanitize_set(element, valid_values=valid_values, limit=limit)
+        clean_value = sanitize_set(element, valid_values=valid_values, limit=limit, hint=hint)
     else:
         return default_value
 
     return clean_value
 
 
-def sanitize_string(raw_element, limit=LIMIT_STR):
+def sanitize_string(raw_element, limit=LIMIT_STR, hint=None):
     """
     Enhanced string sanitization with comprehensive security controls
     Protects against XSS, SQL injection, OpenSearch injection, and other attacks
@@ -204,7 +211,7 @@ def sanitize_string(raw_element, limit=LIMIT_STR):
 
     # URL/URI detection and sanitization - Enhanced with more protocols
     url_patterns = [
-        r'https?://[^\s<>"]+',
+        r'https?://[^\s<>"]+' if hint != 'url' else '',
         r'ftp://[^\s<>"]+',
         r'file://[^\s<>"]+',
         r'data:[^\s<>"]+',
@@ -267,10 +274,11 @@ def sanitize_string(raw_element, limit=LIMIT_STR):
 
     # File extension and MIME type detection
     file_extensions = [
-        r'\.(exe|bat|cmd|com|pif|scr|vbs|js|jar|dll|msi|deb|rpm|dmg|pkg|app)\b',
+        rf'\.(exe|bat|cmd|pif|scr|vbs|js|jar|dll|msi|deb|rpm|dmg|pkg|app{"" if hint == "url" else "|com"})\b',
         r'\.(php|asp|aspx|jsp|cgi|pl|py|rb|sh|bash|zsh|fish)\b',
         r'\.(htaccess|htpasswd|web\.config|robots\.txt)\b'
     ]
+
     for pattern in file_extensions:
         text = re.sub(pattern, '', text, flags=re.IGNORECASE)
 
@@ -309,19 +317,23 @@ def sanitize_string(raw_element, limit=LIMIT_STR):
     for pattern in js_patterns:
         text = re.sub(pattern, '', text, flags=re.IGNORECASE | re.DOTALL)
 
-    # Remove dangerous characters (strict security level)
-    dangerous_chars = '<>"\'`\\;(){}[]$|&*?!^%#@'
+    if hint == 'url':
+        # For URLs, only remove characters that are never valid in URLs
+        dangerous_chars = '<>"\'`\\;(){}[]|^'
+    else:
+        # For non-URLs, remove all dangerous characters
+        dangerous_chars = '<>"\'`\\;(){}[]$|&*?!^%#@'
     for char in dangerous_chars:
         text = text.replace(char, '')
 
     # Special characters that need removal
-    if not is_valid_date_format(text):
-        # if string is date in the format YYYY-MM-DD, it will remove the hyphen
-        opensearch_special = r'[+\-=|><!~:\\\/]'
-        text = re.sub(opensearch_special, ' ', text)
-    else:
+    if hint == 'url':
+        opensearch_special = r'[|><!~]'  # Keep URL-safe characters
+    elif hint == 'date' or is_valid_date_format(text):
         opensearch_special = r'[+=|><!~:\\\/]'
-        text = re.sub(opensearch_special, ' ', text)
+    else:
+        opensearch_special = r'[+\-=|><!~:\\\/]'
+    text = re.sub(opensearch_special, ' ', text)
 
     # Enhanced SQL injection pattern removal
     sql_patterns = [
@@ -466,12 +478,12 @@ def sanitize_string(raw_element, limit=LIMIT_STR):
     text = text.strip()
 
     if is_numeric_string(text):
-        return sanitize_number(text)
+        return sanitize_number(text, hint=hint)
 
     return text
 
 
-def sanitize_number(raw_element, default_value=None, min_value=None, max_value=None, limit=LIMIT_NUM):
+def sanitize_number(raw_element, default_value=None, min_value=None, max_value=None, limit=LIMIT_NUM, hint=None):
     """
     Enhanced number sanitization with comprehensive security controls
     Only allows ASCII digits 0-9 and necessary symbols (+, -, .)
@@ -590,7 +602,7 @@ def sanitize_number(raw_element, default_value=None, min_value=None, max_value=N
         return default_value
 
 
-def sanitize_list(raw_element, valid_values=None, limit=(LIMIT_ITER, LIMIT_STR)):
+def sanitize_list(raw_element, valid_values=None, limit=(LIMIT_ITER, LIMIT_STR), hint=None):
     """
     Sanitize list parameters and validate against predefined values
     """
@@ -608,7 +620,7 @@ def sanitize_list(raw_element, valid_values=None, limit=(LIMIT_ITER, LIMIT_STR))
             break
 
         # Sanitize the key (pass valid_keys as valid_values for key validation)
-        clean_value = sanitize_element(element=value, valid_values=valid_values, limit=limit)
+        clean_value = sanitize_element(element=value, valid_values=valid_values, limit=limit, hint=hint)
 
         if not clean_value:
             continue
@@ -621,7 +633,7 @@ def sanitize_list(raw_element, valid_values=None, limit=(LIMIT_ITER, LIMIT_STR))
 
     return sanitized_list
 
-def sanitize_dict(raw_element, valid_keys=None, valid_values=None, limit=(LIMIT_ITER, LIMIT_STR)):
+def sanitize_dict(raw_element, valid_keys=None, valid_values=None, limit=(LIMIT_ITER, LIMIT_STR), hint=None):
     """
     Sanitize dictionary parameters and validate values against predefined values.
     """
@@ -640,7 +652,7 @@ def sanitize_dict(raw_element, valid_keys=None, valid_values=None, limit=(LIMIT_
             break
 
         # Sanitize the key (pass valid_keys as valid_values for key validation)
-        clean_key = sanitize_element(key, valid_values=valid_keys, limit=limit)
+        clean_key = sanitize_element(key, valid_values=valid_keys, limit=limit, hint=hint)
 
         if not clean_key:
             continue
@@ -651,7 +663,7 @@ def sanitize_dict(raw_element, valid_keys=None, valid_values=None, limit=(LIMIT_
                 continue
 
         # Sanitize the value (pass through valid_values context)
-        clean_value = sanitize_element(value, valid_values=valid_values, limit=limit)
+        clean_value = sanitize_element(value, valid_values=valid_values, limit=limit, hint=hint)
 
         if not clean_value:
             continue
@@ -664,7 +676,7 @@ def sanitize_dict(raw_element, valid_keys=None, valid_values=None, limit=(LIMIT_
 
     return sanitized_dict
 
-def sanitize_tuple(raw_element, valid_values=None, limit=(LIMIT_ITER, LIMIT_STR)):
+def sanitize_tuple(raw_element, valid_values=None, limit=(LIMIT_ITER, LIMIT_STR), hint=None):
     """
     Sanitize tuple parameters and validate against predefined values
     """
@@ -682,7 +694,7 @@ def sanitize_tuple(raw_element, valid_values=None, limit=(LIMIT_ITER, LIMIT_STR)
             break
 
         # Sanitize the value
-        clean_value = sanitize_element(element=value, valid_values=valid_values, limit=limit)
+        clean_value = sanitize_element(element=value, valid_values=valid_values, limit=limit, hint=hint)
 
         if not clean_value:
             continue
@@ -698,7 +710,7 @@ def sanitize_tuple(raw_element, valid_values=None, limit=(LIMIT_ITER, LIMIT_STR)
     return tuple(sanitized_list)
 
 
-def sanitize_set(raw_element, valid_values=None, limit=(LIMIT_ITER, LIMIT_STR)):
+def sanitize_set(raw_element, valid_values=None, limit=(LIMIT_ITER, LIMIT_STR), hint=None):
     """
     Sanitize set parameters and validate against predefined values
     """
@@ -716,7 +728,7 @@ def sanitize_set(raw_element, valid_values=None, limit=(LIMIT_ITER, LIMIT_STR)):
             break
 
         # Sanitize the value
-        clean_value = sanitize_element(element=value, valid_values=valid_values, limit=limit)
+        clean_value = sanitize_element(element=value, valid_values=valid_values, limit=limit, hint=hint)
 
         if not clean_value:
             continue

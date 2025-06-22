@@ -1,6 +1,7 @@
+import functools
 import time
 import logging
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, g
 
 from services.search_service import search_jobs
 from services.insights_service import get_combined_insights, get_organizations_insights
@@ -9,6 +10,8 @@ from services.filters_service import get_country_list, get_organization_list, ge
 from utils.date_utils import get_date_range_days
 from utils.cache_store import cache
 from utils.sanitizers import sanitize_element
+
+from decorators.sanitizer import sanitize_params
 
 search = Blueprint('search', __name__)
 security_logger = logging.getLogger('security')
@@ -19,48 +22,66 @@ ORG = cache.get_store_values('organizations', get_organization_list)
 SRC = cache.get_store_values('sources', get_source_list)
 
 
-def get_parameters()-> dict:
-    """
-    Main function to sanitize all GET parameters with enhanced security
-    Returns a dictionary with sanitized parameters
-    """
-    sanitized = {}
+# Configuration to replace your existing sanitization function
+sanitization_config = {
+    'q': {
+        'source': 'args',
+        'method': 'get',
+        'default': '',
+        'sanitizer': lambda x: sanitize_element(x, limit=(0, 500)),
+        'result_key': 'q'
+    },
 
-    # Sanitize 'q' parameter (free text for search)
-    q = request.args.get('q', '')
-    sanitized['q'] = sanitize_element(q, limit=(0, 500))
+    'country': {
+        'source': 'args',
+        'method': 'getlist',
+        'default': [],
+        'sanitizer': lambda x: sanitize_element(x, valid_values=CTY, limit=(20, 200)),
+        'result_key': 'countries'
+    },
 
-    # Sanitize 'country' parameter (list of predefined strings)
-    countries = request.args.getlist('country')
-    sanitized['countries'] = sanitize_element(countries, valid_values=CTY, limit=(20, 200))
+    'organization': {
+        'source': 'args',
+        'method': 'getlist',
+        'default': [],
+        'sanitizer': lambda x: sanitize_element(x, valid_values=ORG, limit=(30, 500)),
+        'result_key': 'organizations'
+    },
 
-    # Sanitize 'organization' parameter (list of predefined strings)
-    organizations = request.args.getlist('organization')
-    sanitized['organizations'] = sanitize_element(organizations, valid_values=ORG, limit=(30, 500))
+    'source': {
+        'source': 'args',
+        'method': 'getlist',
+        'default': [],
+        'sanitizer': lambda x: sanitize_element(x, valid_values=SRC, limit=(10, 200)),
+        'result_key': 'sources'
+    },
 
-    # Sanitize 'source' parameter (list of predefined strings)
-    sources = request.args.getlist('source')
-    sanitized['sources'] = sanitize_element(sources, valid_values=SRC, limit=(10, 200))
+    'date_posted_days': {
+        'source': 'args',
+        'method': 'get',
+        'default': '365',
+        'sanitizer': lambda x: sanitize_element(x, default_value=365, min_value=0, max_value=31, limit=(0, 2)),
+        'result_key': 'date_posted_days',
+        'custom_logic': lambda x: 365 if (x and x > 30) or (x and x < 0) else x
+    },
 
-    # Sanitize 'date_posted_days' parameter with enhanced security
-    date_posted_days = request.args.get('date_posted_days', '365')
-    clean_date_posted = sanitize_element(date_posted_days, default_value=365, min_value=0, max_value=31, limit=(0, 2))
-    if clean_date_posted and clean_date_posted > 30 or date_posted_days < 0:
-        clean_date_posted = 365 # Default is 1 year
-    sanitized['date_posted_days'] = clean_date_posted
+    'from': {
+        'source': 'args',
+        'method': 'get',
+        'default': '0',
+        'sanitizer': lambda x: sanitize_element(x, default_value=0, min_value=0, max_value=10000, limit=(0, 5)),
+        'result_key': 'offset'
+    }
+}
 
-    # Sanitize 'from' parameter with enhanced security
-    from_param = request.args.get('from', '0')
-    sanitized['offset'] = sanitize_element(from_param, default_value=0, min_value=0, max_value=10000, limit=(0, 5))
-
-    return sanitized
 
 @search.route("/insights")
+@sanitize_params(sanitization_config)
 def search_insights():
     """Get all insights data in a single response: overview, jobs per day, top countries, and word cloud"""
     try:
-        # Process ALL parameters with business logic in one call
-        params = get_parameters()
+        # Access sanitized parameters directly from g
+        params = g.sanitized_params
 
         # Get combined insights data
         data = get_combined_insights(params)
@@ -84,12 +105,14 @@ def search_insights():
         security_logger.error("Error in combined insights: %s", e)
         return jsonify({"error": "Failed to load insights data"}), 500
 
+
 @search.route("/organizations")
+@sanitize_params(sanitization_config)
 def search_organizations():
     """Get organizations with job counts and last update dates"""
     try:
-        # Process ALL parameters with business logic in one call
-        params = get_parameters()
+        # Access sanitized parameters directly from g
+        params = g.sanitized_params
 
         data = get_organizations_insights(params)
 
@@ -106,20 +129,20 @@ def search_organizations():
         security_logger.error("Error in organizations insights: %s", e)
         return jsonify({"error": "Failed to load organizations data"}), 500
 
+
 @search.route("/search")
+@sanitize_params(sanitization_config)
 def search_search():
     """Main search endpoint with comprehensive security"""
     try:
-        # Process ALL parameters with business logic in one call
-        params = get_parameters()
-
-        # Extract processed parameters
-        query = params['q']
-        selected_countries = params['countries']
-        selected_organizations = params['organizations']
-        selected_sources = params['sources']
-        offset = params['offset']
-        days = params['date_posted_days']
+        # Now you can use request.args.get() and request.args.getlist() directly
+        # and they will return sanitized values
+        query = request.args.get('q', '')
+        selected_countries = request.args.getlist('country')
+        selected_organizations = request.args.getlist('organization')
+        selected_sources = request.args.getlist('source')
+        offset = request.args.get('from', 0)
+        days = request.args.get('date_posted_days', 365)
 
         # Check if query is empty for template rendering
         is_empty_query = not bool(query)

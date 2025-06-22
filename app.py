@@ -1,3 +1,4 @@
+import os
 from config import get_config
 from app_factory import create_app
 from server import ProductionServer, DevelopmentServer
@@ -11,7 +12,6 @@ def main():
     config_class.init_app(app)
 
     # Determine server type based on environment
-    import os
     if os.getenv('FLASK_ENV') == 'production':
         server = ProductionServer(app)
     else:
