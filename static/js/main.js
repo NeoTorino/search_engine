@@ -16,15 +16,23 @@ document.addEventListener('DOMContentLoaded', () => {
    * @param {number} value - Slider value
    */
   function updateLabelAndColor(value) {
-    const val = parseInt(value);
-    const max = parseInt(slider.max);
-    const percent = (val / max) * 100;
+      const val = parseInt(value);
+      const max = parseInt(slider.max);
+      const percent = (val / max) * 100;
 
-    label.textContent = val === 31
-    ? "Showing all jobs"
-    : `Showing jobs posted today${val === 0 ? '' : ` and past ${val} day${val > 1 ? 's' : ''}`}`;
+      let message;
 
-    slider.style.background = `linear-gradient(to right, #64748b 0%, #64748b ${percent}%, #dee2e6 ${percent}%, #dee2e6 100%)`;
+      if (val === 0) {
+          message = "Showing jobs posted today";
+      } else if (val >= 1 && val <= 30) {
+          message = `Showing jobs posted the last ${val} day${val > 1 ? 's' : ''}`;
+      } else if (val > 30) {
+          message = "Showing all jobs";
+      }
+
+      label.textContent = message;
+
+      slider.style.background = `linear-gradient(to right, #64748b 0%, #64748b ${percent}%, #dee2e6 ${percent}%, #dee2e6 100%)`;
   }
 
   // Make updateLabelAndColor globally available

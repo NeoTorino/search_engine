@@ -112,9 +112,10 @@
         </script>
         {% endif %}
 
-        <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/utils.js') }}"></script>
-        <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/filters.js') }}"></script>
-        <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/main.js') }}"></script>
+        <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/utils.js') }}?v={{ time.time() }}"></script>
+        <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/filters.js') }}?v={{ time.time() }}"></script>
+        <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/main.js') }}?v={{ time.time() }}"></script>
+        <script nonce="{{ nonce }}" src="{{ url_for('static', filename='js/search.js') }}?v={{ time.time() }}"></script>
 
         {% block scripts %}
         <!-- Only include page-specific scripts here -->

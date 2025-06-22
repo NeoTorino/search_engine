@@ -4,8 +4,17 @@ let currentSort = { column: null, direction: 'asc' };
 
 // Load all data when page loads
 document.addEventListener('DOMContentLoaded', function() {
-    // Setup search functionality
-    document.getElementById('searchOrgs').addEventListener('input', filterOrganizations);
+    // Setup search functionality for the header search input
+    const headerSearchInput = document.querySelector('#org-search-container #searchOrgs');
+    if (headerSearchInput) {
+        headerSearchInput.addEventListener('input', filterOrganizations);
+    }
+
+    // Also setup for the table search input (if it exists) as fallback
+    const tableSearchInput = document.querySelector('.stats-container #searchOrgs');
+    if (tableSearchInput) {
+        tableSearchInput.addEventListener('input', filterOrganizations);
+    }
 
     // Setup sorting functionality
     setupSortingHeaders();
@@ -48,8 +57,11 @@ function setupSortingHeaders() {
     document.getElementById('sort-header-jobs').addEventListener('click', () => sortTable('jobs'));
     document.getElementById('sort-header-date').addEventListener('click', () => sortTable('date'));
 
-    // Re-attach search event listener since we recreated the input
-    document.getElementById('searchOrgs').addEventListener('input', filterOrganizations);
+    // Re-attach search event listener for header input
+    const headerSearchInput = document.querySelector('#org-search-container #searchOrgs');
+    if (headerSearchInput) {
+        headerSearchInput.addEventListener('input', filterOrganizations);
+    }
 }
 
 // Sort table function
@@ -144,6 +156,28 @@ function viewJobsByOrganization(organizationName) {
     window.location.href = newUrl;
 }
 
+// Setup event delegation for view jobs buttons
+function setupViewJobsButtons() {
+    const tbody = document.getElementById('orgsTableBody');
+
+    // Remove existing event listener to prevent duplicates
+    tbody.removeEventListener('click', handleViewJobsClick);
+
+    // Add event listener using event delegation
+    tbody.addEventListener('click', handleViewJobsClick);
+}
+
+// Handle click events on view jobs buttons
+function handleViewJobsClick(event) {
+    if (event.target.matches('.view-jobs-btn') || event.target.closest('.view-jobs-btn')) {
+        const button = event.target.matches('.view-jobs-btn') ? event.target : event.target.closest('.view-jobs-btn');
+        const organizationName = button.getAttribute('data-organization');
+        if (organizationName) {
+            viewJobsByOrganization(organizationName);
+        }
+    }
+}
+
 // Load organizations table
 async function loadOrganizations(searchParams = '') {
     try {
@@ -153,6 +187,9 @@ async function loadOrganizations(searchParams = '') {
 
         organizationsData = data.organizations;
         renderOrganizationsTable(organizationsData);
+
+        // Setup event listeners for view jobs buttons after rendering
+        setupViewJobsButtons();
     } catch (error) {
         console.error('Error loading organizations:', error);
         document.getElementById('orgsTableBody').innerHTML =
@@ -184,8 +221,8 @@ function renderOrganizationsTable(organizations) {
                    </a>`
                 : '<span class="text-muted">N/A</span>';
 
-            // Create view jobs button
-            const viewJobsButton = `<button type="button" class="btn btn-outline-success btn-sm" onclick="viewJobsByOrganization('${name.replace(/'/g, "\\'")}')">
+            // Create view jobs button with data attribute instead of onclick
+            const viewJobsButton = `<button type="button" class="btn btn-outline-success btn-sm view-jobs-btn" data-organization="${name.replace(/"/g, '&quot;')}">
                                       <i class="fas fa-search me-1"></i>View Jobs
                                     </button>`;
 
@@ -199,11 +236,23 @@ function renderOrganizationsTable(organizations) {
                 </tr>
             `;
         }).join('');
+
+    // Setup event listeners after rendering
+    setupViewJobsButtons();
 }
 
-// Filter organizations
 function filterOrganizations() {
-    const searchTerm = document.getElementById('searchOrgs').value.toLowerCase();
+    // Get search term from header input first, then fallback to table input
+    const headerSearchInput = document.querySelector('#org-search-container #searchOrgs');
+    const tableSearchInput = document.querySelector('.stats-container #searchOrgs');
+
+    let searchTerm = '';
+    if (headerSearchInput) {
+        searchTerm = headerSearchInput.value.toLowerCase();
+    } else if (tableSearchInput) {
+        searchTerm = tableSearchInput.value.toLowerCase();
+    }
+
     let filtered = organizationsData.filter(org =>
         org.name.toLowerCase().includes(searchTerm) ||
         (org.country && org.country.toLowerCase().includes(searchTerm))
@@ -225,7 +274,7 @@ function filterOrganizations() {
                     break;
                 case 'date':
                     valueA = new Date(a.last_updated || 0);
-                    valueB = b.last_updated || 0;
+                    valueB = new Date(b.last_updated || 0);
                     break;
             }
 

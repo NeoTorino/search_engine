@@ -1,32 +1,58 @@
 let jobsPerDayChart = null;
 let countriesChart = null;
 
-// Track current loading state to prevent duplicate requests
+// Enhanced loading state management
 let isLoading = false;
 let currentSearchParams = '';
+let loadingPromise = null; // Track the current loading promise
 
 // Main load function that accepts search parameters
 async function loadInsights(searchParams = '') {
-    // Prevent duplicate calls with same parameters
-    if (isLoading && currentSearchParams === searchParams) {
-        console.log('Insights already loading for these parameters, skipping duplicate call');
-        return;
+    // Normalize search parameters for comparison
+    const normalizedParams = searchParams.trim();
+
+    // If same parameters and already loading, return the existing promise
+    if (isLoading && currentSearchParams === normalizedParams) {
+        console.log('Insights already loading for these parameters, returning existing promise');
+        return loadingPromise;
     }
 
-    // If different parameters, allow the call
-    if (currentSearchParams !== searchParams) {
+    // If different parameters, cancel any existing load and start fresh
+    if (currentSearchParams !== normalizedParams) {
+        console.log('Different search parameters detected, allowing new load');
         isLoading = false;
+        loadingPromise = null;
     }
 
+    // If still loading but with different params, wait a bit and retry
     if (isLoading) {
-        console.log('Insights already loading, skipping duplicate call');
-        return;
+        console.log('Still loading previous request, waiting...');
+        await new Promise(resolve => setTimeout(resolve, 100));
+        return loadInsights(searchParams); // Retry
     }
 
+    // Set loading state
     isLoading = true;
-    currentSearchParams = searchParams;
+    currentSearchParams = normalizedParams;
+
+    // Create and store the loading promise
+    loadingPromise = performInsightsLoad(normalizedParams);
 
     try {
+        const result = await loadingPromise;
+        return result;
+    } finally {
+        // Reset loading state
+        isLoading = false;
+        loadingPromise = null;
+    }
+}
+
+// Separate function to perform the actual loading
+async function performInsightsLoad(searchParams) {
+    try {
+        console.log('Starting insights load with params:', searchParams);
+
         // Show loading state for all components
         showLoadingState();
 
@@ -52,19 +78,22 @@ async function loadInsights(searchParams = '') {
         loadTopCountriesFromData(data.top_countries);
         loadWordCloudFromData(data.word_cloud);
 
+        console.log('Insights loaded successfully');
+        return data;
+
     } catch (error) {
         console.error('Error loading insights:', error);
         showAllErrors();
-    } finally {
-        // Reset loading state
-        isLoading = false;
+        throw error;
     }
 }
 
-// Reset loading state when search parameters change
+// Reset loading state when search parameters change - improved
 window.resetInsightsLoadingState = function() {
+    console.log('Resetting insights loading state');
     isLoading = false;
     currentSearchParams = '';
+    loadingPromise = null;
 };
 
 // Load all data when page loads (but don't auto-load - wait for tab switch)

@@ -395,7 +395,7 @@
     color: #ffffff;
   }
 
-  .bootstrap-select:not(.input-group-btn), 
+  .bootstrap-select:not(.input-group-btn),
   .bootstrap-select[class*=col-] {
     margin-top: 26px;
   }
@@ -479,3 +479,107 @@
       justify-content: center;
     }
   }
+
+
+/* Tab styles */
+.nav-tabs {
+    /* border-bottom: 2px solid #dee2e6; */
+    margin-bottom: 2rem;
+}
+
+.nav-tabs .nav-link {
+    border: none;
+    color: #6c757d;
+    font-weight: 500;
+    padding: 1rem 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.nav-tabs .nav-link:hover {
+    border: none;
+    color: #007bff;
+}
+
+.nav-tabs .nav-link.active {
+    color: #007bff;
+    background-color: transparent;
+    border-bottom: 2px solid #007bff;
+    border-radius: 0;
+}
+
+.tab-content {
+    min-height: 400px;
+}
+
+.tab-pane {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.tabs-header-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    margin-bottom: 2rem;
+}
+
+.tabs-header-container::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: #dee2e6;
+    z-index: 0;
+}
+
+.nav-tabs {
+    flex-shrink: 0;
+    margin-bottom: 0;
+    border-bottom: none;
+    position: relative;
+    z-index: 1;
+}
+
+/* Results count styling */
+.results-count-container {
+    opacity: 1;
+    transition: opacity 0.3s ease;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    min-width: 0; /* Allow shrinking */
+}
+
+.results-count-container.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.results-count-container p {
+    font-size: 0.875rem;
+    color: #6c757d !important;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Responsive behavior */
+@media (max-width: 768px) {
+    .results-count-container {
+        display: none; /* Hide on mobile to prevent layout issues */
+    }
+}
+
+@media (max-width: 992px) {
+    .results-count-container p {
+        font-size: 0.8rem;
+    }
+}

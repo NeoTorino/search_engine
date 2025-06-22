@@ -21,12 +21,12 @@ def build_date_range_filter(date_posted_days):
         # we return everything in the last year if date_posted is >30
         date_posted_days = 365
 
-    end_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    start_date = (end_date - timedelta(days=date_posted_days)).replace(hour=0, minute=0, second=0, microsecond=0)
+    today = datetime.utcnow().date()
+    start_date = today - timedelta(days=date_posted_days)
 
     return {
         "gte": start_date.isoformat(),
-        "lte": end_date.isoformat()
+        "lte": today.isoformat()
     }
 
 def process_search_params(search_params):
@@ -227,8 +227,8 @@ def get_combined_insights(search_params=None):
                 "filter": [{
                     "range": {
                         "date_posted": {
-                            "gte": start_date.isoformat(),
-                            "lte": end_date.isoformat()
+                            "gte": start_date.strftime("%Y-%m-%d"),
+                            "lte": end_date.strftime("%Y-%m-%d")
                         }
                     }
                 }]
@@ -401,7 +401,10 @@ def get_organizations_insights(search_params=None):
                         "value_count": {"field": "organization"}
                     },
                     "last_updated": {
-                        "max": {"field": "last_update"}
+                        "max": {
+                            "field": "last_update",
+                            "format": "yyyy-MM-dd"
+                        }
                     },
                     "url_careers": {
                         "terms": {

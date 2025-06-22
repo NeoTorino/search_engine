@@ -4,6 +4,10 @@ let currentQuery = '';
 let filtersVisible = false;
 let filterUpdateTimeout = null;
 
+// Track loading state to prevent duplicate calls
+let isFilterUpdating = false;
+let lastFilterUpdateParams = '';
+
 /**
  * Toggles the visibility of filters panel
  */
@@ -62,7 +66,9 @@ function initializeFiltersState() {
  * @param {string} query - Search query
  */
 function updateResultsCount(totalResults, query) {
-  const resultsCountElement = document.querySelector('.text-muted.liner');
+  // Look for the new results count element in the header
+  const resultsCountElement = document.querySelector('#results-count p');
+
   if (resultsCountElement) {
     const formattedCount = totalResults.toLocaleString();
     const plural = totalResults !== 1 ? 's' : '';
@@ -74,7 +80,7 @@ function updateResultsCount(totalResults, query) {
       if(totalResults >= 10000){
         message = `Showing all jobs`;
       }else{
-        message = `Found ${formattedCount} result${plural} for "<strong>${query}</strong>"`;
+        message = `About ${formattedCount} result${plural} for "<strong>${query}</strong>"`;
       }
     }
     resultsCountElement.innerHTML = message;
@@ -247,23 +253,100 @@ function resetFilters() {
 }
 
 /**
- * Handles filter update events
+ * Checks if insights tab is currently active and visible
+ * @returns {boolean} True if insights tab is active and visible
+ */
+function isInsightsTabActiveAndVisible() {
+  const activeTab = document.querySelector('#mainTabs .nav-link.active');
+  const insightsTab = document.querySelector('#mainTabs .nav-link[data-bs-target="#insights"]');
+  const insightsPane = document.getElementById('insights');
+
+  // Check if insights tab is active
+  const isInsightsActive = activeTab && activeTab.getAttribute('data-bs-target') === '#insights';
+
+  // Check if insights pane is visible (not hidden)
+  const isInsightsVisible = insightsPane && insightsPane.classList.contains('active');
+
+  console.log('Insights tab check:', {
+    isInsightsActive,
+    isInsightsVisible,
+    activeTabTarget: activeTab ? activeTab.getAttribute('data-bs-target') : 'none'
+  });
+
+  return isInsightsActive && isInsightsVisible;
+}
+
+/**
+ * Gets current search parameters as string for comparison
+ * @returns {string} Current search parameters
+ */
+function getCurrentSearchParams() {
+  const form = document.getElementById('search-form') || document.querySelector('form');
+  if (!form) return '';
+
+  const formData = new FormData(form);
+  const params = new URLSearchParams(formData);
+  return params.toString();
+}
+
+/**
+ * Handles filter update events with improved duplicate prevention
  */
 function handleFilterUpdate() {
+  console.log('handleFilterUpdate called');
+
+  // Clear tab cache if available
   if (typeof window.clearTabCache === 'function') {
       window.clearTabCache();
   }
 
+  // Reset insights loading state to allow fresh loads
   if (typeof window.resetInsightsLoadingState === 'function') {
       window.resetInsightsLoadingState();
   }
 
-  const activeTab = document.querySelector('#mainTabs .nav-link.active');
-  if (activeTab && activeTab.getAttribute('data-bs-target') === '#insights') {
-      const searchParams = getCurrentSearchParams();
-      if (typeof window.loadInsights === 'function') {
-          window.loadInsights(searchParams);
-      }
+  // Get current search parameters
+  const searchParams = getCurrentSearchParams();
+  const normalizedParams = searchParams.trim();
+
+  console.log('Filter update - current params:', normalizedParams);
+  console.log('Filter update - last params:', lastFilterUpdateParams);
+
+  // Prevent duplicate calls with same parameters
+  if (isFilterUpdating && lastFilterUpdateParams === normalizedParams) {
+    console.log('Filter update already in progress with same parameters, skipping');
+    return;
+  }
+
+  // Check if insights tab is actually active and visible
+  if (isInsightsTabActiveAndVisible()) {
+    console.log('Insights tab is active and visible, loading insights');
+
+    // Set loading state
+    isFilterUpdating = true;
+    lastFilterUpdateParams = normalizedParams;
+
+    // Load insights with current parameters
+    if (typeof window.loadInsights === 'function') {
+      window.loadInsights(searchParams)
+        .then(() => {
+          console.log('Insights loaded successfully from filter update');
+        })
+        .catch(error => {
+          console.error('Error loading insights from filter update:', error);
+        })
+        .finally(() => {
+          // Reset loading state after a short delay
+          setTimeout(() => {
+            isFilterUpdating = false;
+          }, 1000);
+        });
+    }
+  } else {
+    console.log('Insights tab not active/visible, skipping insights load');
+    // Reset the loading state since we're not loading
+    isFilterUpdating = false;
+    lastFilterUpdateParams = '';
   }
 }
 
@@ -276,16 +359,19 @@ function refreshActiveTab() {
     const targetTab = activeTab.getAttribute('data-bs-target');
     const searchParams = getCurrentSearchParams();
 
+    console.log('Refreshing active tab:', targetTab);
+
     if (targetTab === '#organizations' && typeof window.loadOrganizations === 'function') {
+      console.log('Loading organizations for active tab');
       window.loadOrganizations(searchParams);
-    } else if (targetTab === '#insights' && typeof window.loadInsights === 'function') {
-      window.loadInsights(searchParams);
     }
+    // Note: We don't call loadInsights here anymore to prevent duplicates
+    // Insights loading is now handled exclusively by handleFilterUpdate() and tab switching
   }
 }
 
 /**
- * Attaches dropdown event listeners
+ * Attaches dropdown event listeners with improved debouncing
  */
 function attachDropdownListeners() {
   $('#country-select, #organization-select, #source-select').off('hidden.bs.select.customFilter');
@@ -293,11 +379,15 @@ function attachDropdownListeners() {
   $('#country-select, #organization-select, #source-select').on('hidden.bs.select.customFilter', function() {
     console.log('Dropdown closed:', this.id);
 
+    // Clear any existing timeout
     if (filterUpdateTimeout) {
       clearTimeout(filterUpdateTimeout);
     }
 
+    // Debounce the filter update to prevent rapid-fire calls
     filterUpdateTimeout = setTimeout(() => {
+      console.log('Processing dropdown change after debounce');
+
       const queryInput = document.querySelector('input[name="q"]');
       const rawQuery = queryInput ? queryInput.value.trim() : '';
       const query = sanitizeInput(rawQuery);
@@ -308,12 +398,29 @@ function attachDropdownListeners() {
         const formData = new FormData(form);
         formData.set('q', currentQuery);
         const params = new URLSearchParams(formData);
-        fetchFilteredResults(params.toString());
-      }
 
-      handleFilterUpdate();
-    }, 300);
+        // Fetch filtered results first
+        fetchFilteredResults(params.toString());
+
+        // Then handle filter update (which may load insights if tab is active)
+        handleFilterUpdate();
+      }
+    }, 300); // Increased debounce time slightly for better UX
   });
+}
+
+/**
+ * Reset filter update tracking (called when search parameters change significantly)
+ */
+function resetFilterUpdateTracking() {
+  console.log('Resetting filter update tracking');
+  isFilterUpdating = false;
+  lastFilterUpdateParams = '';
+
+  if (filterUpdateTimeout) {
+    clearTimeout(filterUpdateTimeout);
+    filterUpdateTimeout = null;
+  }
 }
 
 // Make functions globally available
@@ -324,3 +431,5 @@ window.currentQuery = currentQuery;
 window.initializeFiltersState = initializeFiltersState;
 window.attachDropdownListeners = attachDropdownListeners;
 window.handleFilterUpdate = handleFilterUpdate;
+window.getCurrentSearchParams = getCurrentSearchParams;
+window.resetFilterUpdateTracking = resetFilterUpdateTracking;

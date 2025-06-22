@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 def get_date_range_days(days):
     """Get date range for last X days"""
-    if days <= 0:
+    if days < 0:
         return None
     end = datetime.utcnow()
     return {'start': end - timedelta(days=days), 'end': end}
