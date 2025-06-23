@@ -22,10 +22,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       let message;
 
-      if (val === 0) {
+      if (val === 1) {
           message = "Showing jobs posted today";
-      } else if (val >= 1 && val <= 30) {
-          message = `Showing jobs posted the last ${val} day${val > 1 ? 's' : ''}`;
+      } else if (val > 1 && val <= 30) {
+          message = `Showing jobs posted the last ${val} days`;
       } else if (val > 30) {
           message = "Showing all jobs";
       }

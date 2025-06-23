@@ -9,7 +9,7 @@ warnings.filterwarnings('ignore', message='Unverified HTTPS request')
 from flask import Flask
 from dotenv import load_dotenv
 
-from utils.logging_config import setup_logging
+from config.logging import setup_logging
 
 from filters.custom_filters import register_filters
 

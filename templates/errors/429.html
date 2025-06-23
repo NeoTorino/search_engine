@@ -13,24 +13,16 @@
                     You've made too many requests in a short period of time.
                 </p>
                 <p class="mb-4">
-                    Please wait a moment before trying again. This limit helps us ensure our service 
+                    Please wait a moment before trying again. This limit helps us ensure our service
                     remains fast and available for everyone.
                 </p>
-
                 <div class="mt-4">
-                    <button onclick="setTimeout(() => window.location.reload(), 5000); this.disabled = true; this.innerHTML = 'Retrying in 5 seconds...';" class="btn btn-primary btn-lg mr-3">
-                        Retry in 5 Seconds
-                    </button>
-                    <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary btn-lg">
-                        Go to Homepage
+                    <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-lg me-3">
+                        <i class="fas fa-home me-2"></i>Go Home
                     </a>
-                </div>
-
-                <div class="mt-4">
-                    <small class="text-muted">
-                        If you continue to experience issues, please contact us at 
-                        <a href="mailto:neotorino13@gmail.com">neotorino13@gmail.com</a>
-                    </small>
+                    <button onclick="window.history.back()" class="btn btn-outline-secondary btn-lg">
+                        <i class="fas fa-arrow-left me-2"></i>Go Back
+                    </button>
                 </div>
             </div>
         </div>
@@ -40,6 +32,10 @@
 <style nonce="{{ nonce }}">
 .error-page {
     padding: 2rem 0;
+    min-height: 60vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .error-page h1 {
@@ -68,7 +64,7 @@
         margin-bottom: 1rem;
     }
 
-    .mr-3 {
+    .me-3 {
         margin-right: 0 !important;
     }
 }

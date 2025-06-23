@@ -8,6 +8,77 @@ let filterUpdateTimeout = null;
 let isFilterUpdating = false;
 let lastFilterUpdateParams = '';
 
+// Track previous dropdown states to detect actual changes
+let previousDropdownStates = {
+  'country-select': [],
+  'organization-select': [],
+  'source-select': []
+};
+
+/**
+ * Captures the current state of a dropdown
+ * @param {string} dropdownId - The ID of the dropdown
+ * @returns {Array} Array of selected values
+ */
+function captureDropdownState(dropdownId) {
+  const dropdown = $(`#${dropdownId}`);
+  return dropdown.length ? (dropdown.val() || []).slice() : [];
+}
+
+/**
+ * Captures the current state of all dropdowns
+ */
+function captureAllDropdownStates() {
+  previousDropdownStates['country-select'] = captureDropdownState('country-select');
+  previousDropdownStates['organization-select'] = captureDropdownState('organization-select');
+  previousDropdownStates['source-select'] = captureDropdownState('source-select');
+
+  console.log('Captured dropdown states:', previousDropdownStates);
+}
+
+/**
+ * Checks if any dropdown has actually changed
+ * @returns {boolean} True if any dropdown has changed
+ */
+function hasAnyDropdownChanged() {
+  const currentStates = {
+    'country-select': captureDropdownState('country-select'),
+    'organization-select': captureDropdownState('organization-select'),
+    'source-select': captureDropdownState('source-select')
+  };
+
+  console.log('Comparing states:', {
+    previous: previousDropdownStates,
+    current: currentStates
+  });
+
+  // Check each dropdown for changes
+  for (const dropdownId in currentStates) {
+    const previous = previousDropdownStates[dropdownId] || [];
+    const current = currentStates[dropdownId] || [];
+
+    // Compare arrays - check if lengths are different or if any values are different
+    if (previous.length !== current.length) {
+      console.log(`${dropdownId} changed: length difference`);
+      return true;
+    }
+
+    // Sort both arrays for comparison to handle order differences
+    const sortedPrevious = [...previous].sort();
+    const sortedCurrent = [...current].sort();
+
+    for (let i = 0; i < sortedPrevious.length; i++) {
+      if (sortedPrevious[i] !== sortedCurrent[i]) {
+        console.log(`${dropdownId} changed: value difference`);
+        return true;
+      }
+    }
+  }
+
+  console.log('No dropdown changes detected');
+  return false;
+}
+
 /**
  * Toggles the visibility of filters panel
  */
@@ -34,6 +105,9 @@ function toggleFilters() {
     filtersContainer.classList.add('show');
     toggleButton.classList.add('active');
     toggleText.textContent = 'Hide Filters';
+
+    // Capture initial state when filters are shown
+    captureAllDropdownStates();
   } else {
     // Hide filters
     filtersContainer.classList.remove('show');
@@ -58,6 +132,9 @@ function initializeFiltersState() {
     if (toggleText) toggleText.textContent = 'Show Filters';
     filtersVisible = false;
   }
+
+  // Capture initial dropdown states
+  captureAllDropdownStates();
 }
 
 /**
@@ -207,6 +284,9 @@ function fetchFilteredResults(queryParams) {
 
       // Re-attach event listeners after updating dropdowns
       attachDropdownListeners();
+
+      // Update dropdown states after successful update
+      captureAllDropdownStates();
     })
     .catch(error => {
       console.error('Error fetching filtered results:', error);
@@ -250,6 +330,9 @@ function resetFilters() {
 
   refreshActiveTab();
   handleFilterUpdate();
+
+  // Capture new state after reset
+  captureAllDropdownStates();
 }
 
 /**
@@ -371,13 +454,28 @@ function refreshActiveTab() {
 }
 
 /**
- * Attaches dropdown event listeners with improved debouncing
+ * Attaches dropdown event listeners with improved debouncing and change detection
  */
 function attachDropdownListeners() {
   $('#country-select, #organization-select, #source-select').off('hidden.bs.select.customFilter');
+  $('#country-select, #organization-select, #source-select').off('shown.bs.select.customFilter');
+
+  // Capture state when dropdown is opened
+  $('#country-select, #organization-select, #source-select').on('shown.bs.select.customFilter', function() {
+    console.log('Dropdown opened:', this.id);
+    captureAllDropdownStates();
+  });
 
   $('#country-select, #organization-select, #source-select').on('hidden.bs.select.customFilter', function() {
     console.log('Dropdown closed:', this.id);
+
+    // Check if any dropdown actually changed
+    if (!hasAnyDropdownChanged()) {
+      console.log('No changes detected in dropdowns, skipping AJAX call');
+      return;
+    }
+
+    console.log('Changes detected in dropdowns, proceeding with AJAX call');
 
     // Clear any existing timeout
     if (filterUpdateTimeout) {
@@ -421,9 +519,50 @@ function resetFilterUpdateTracking() {
     clearTimeout(filterUpdateTimeout);
     filterUpdateTimeout = null;
   }
+
+  // Also reset dropdown state tracking
+  captureAllDropdownStates();
 }
 
-// Make functions globally available
+// Function to update the slider background gradient based on current value
+function updateSliderBackground(slider) {
+    if (!slider) return;
+
+    const min = parseFloat(slider.min) || 1;
+    const max = parseFloat(slider.max) || 31;
+    const value = parseFloat(slider.value) || min;
+
+    // Calculate percentage - note that lower values (closer to "today") should show more color
+    // Since min=1 is "today" and max=31 is "all time", we need to invert the calculation
+    const percentage = ((value - min) / (max - min)) * 100;
+
+    // Update background gradient
+    slider.style.background = `linear-gradient(to right, var(--secondary-color) ${percentage}%, var(--border-color) ${percentage}%)`;
+}
+
+// Function to initialize slider on page load
+function initializeDateSlider() {
+    const slider = document.getElementById('date-slider');
+    if (slider) {
+        // Set initial background
+        updateSliderBackground(slider);
+
+        // Add event listener for input changes
+        slider.addEventListener('input', function() {
+            updateSliderBackground(this);
+        });
+
+        // Also update on change event for better compatibility
+        slider.addEventListener('change', function() {
+            updateSliderBackground(this);
+        });
+    }
+}
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', initializeDateSlider);
+
+// Make functions globally available (in case it's called from other scripts)
 window.toggleFilters = toggleFilters;
 window.fetchFilteredResults = fetchFilteredResults;
 window.resetFilters = resetFilters;
@@ -433,3 +572,5 @@ window.attachDropdownListeners = attachDropdownListeners;
 window.handleFilterUpdate = handleFilterUpdate;
 window.getCurrentSearchParams = getCurrentSearchParams;
 window.resetFilterUpdateTracking = resetFilterUpdateTracking;
+window.updateSliderBackground = updateSliderBackground;
+window.initializeDateSlider = initializeDateSlider;

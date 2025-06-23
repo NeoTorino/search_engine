@@ -1,4 +1,3 @@
-import functools
 import time
 import logging
 from flask import Blueprint, render_template, request, jsonify, g
@@ -12,8 +11,9 @@ from utils.cache_store import cache
 from utils.sanitizers import sanitize_element
 
 from decorators.sanitizer import sanitize_params
+from decorators.debug import debug
 
-search = Blueprint('search', __name__)
+search_bp = Blueprint('search', __name__)
 security_logger = logging.getLogger('security')
 
 
@@ -75,9 +75,10 @@ sanitization_config = {
 }
 
 
-@search.route("/insights")
+@search_bp.route("/insights")
 @sanitize_params(sanitization_config)
-def search_insights():
+@debug()
+def insights():
     """Get all insights data in a single response: overview, jobs per day, top countries, and word cloud"""
     try:
         # Access sanitized parameters directly from g
@@ -106,9 +107,10 @@ def search_insights():
         return jsonify({"error": "Failed to load insights data"}), 500
 
 
-@search.route("/organizations")
+@search_bp.route("/organizations")
 @sanitize_params(sanitization_config)
-def search_organizations():
+@debug()
+def organizations():
     """Get organizations with job counts and last update dates"""
     try:
         # Access sanitized parameters directly from g
@@ -130,9 +132,10 @@ def search_organizations():
         return jsonify({"error": "Failed to load organizations data"}), 500
 
 
-@search.route("/search")
+@search_bp.route("/search")
 @sanitize_params(sanitization_config)
-def search_search():
+@debug()
+def search():
     """Main search endpoint with comprehensive security"""
     try:
         # Now you can use request.args.get() and request.args.getlist() directly

@@ -82,7 +82,8 @@ def search_jobs(query, selected_countries=None, selected_organizations=None, sel
     show_load_more = True
 
     try:
-        print(json.dumps(payload, indent=4))    # for debugging
+        # Debug
+        # print(json.dumps(payload, indent=4))
         res = requests.get(url, auth=AUTH, json=payload, verify=False, timeout=5)
         if res.status_code == 200:
             data = res.json()

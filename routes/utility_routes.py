@@ -1,9 +1,9 @@
 from datetime import datetime
 from flask import Blueprint, make_response
 
-utility = Blueprint('utility', __name__)
+utility_bp = Blueprint('utility', __name__)
 
-@utility.route("/robots.txt", methods=["GET"])
+@utility_bp.route("/robots.txt", methods=["GET"])
 def robots_txt():
     """
     Serve robots.txt file for web crawlers from template folder
@@ -19,7 +19,7 @@ def robots_txt():
     response.headers['Content-Type'] = 'text/plain'
     return response
 
-@utility.route('/health')
+@utility_bp.route('/health')
 def health_check():
     """Health check endpoint (useful for load balancers)"""
     return {'status': 'healthy', 'timestamp': datetime.utcnow().isoformat()}

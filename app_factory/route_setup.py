@@ -1,12 +1,12 @@
-from routes.main_routes import main
-from routes.utility_routes import utility
-from routes.page_routes import pages
-from routes.search_routes import search
+from routes.main_routes import main_bp
+from routes.utility_routes import utility_bp
+from routes.search_routes import search_bp
+from routes.error_routes import error_bp
 
 def register_blueprints(app):
     """Register all application blueprints"""
 
-    app.register_blueprint(main)
-    app.register_blueprint(pages)
-    app.register_blueprint(utility)
-    app.register_blueprint(search)
+    app.register_blueprint(main_bp)
+    app.register_blueprint(utility_bp)
+    app.register_blueprint(search_bp)
+    app.register_blueprint(error_bp)

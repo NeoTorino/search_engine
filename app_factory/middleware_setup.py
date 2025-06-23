@@ -1,7 +1,7 @@
 from werkzeug.middleware.proxy_fix import ProxyFix
 from middleware.secure_headers import apply_secure_headers
-from routes.errors import register_error_handlers
 from filters.custom_filters import register_filters
+from routes.error_routes import register_error_handlers
 from .extensions import get_extensions
 
 def setup_middleware(app):

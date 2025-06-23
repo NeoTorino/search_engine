@@ -417,6 +417,9 @@ def get_organizations_insights(search_params=None):
         }
     }
 
+    # debug
+    print(json.dumps(payload, indent=4))
+
     url_search = f"{OPENSEARCH_URL}/{INDEX_NAME}/_search"
     response = requests.get(url=url_search, auth=AUTH, json=payload, verify=False, timeout=10)
 

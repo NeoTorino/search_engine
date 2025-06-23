@@ -630,6 +630,8 @@ def sanitize_list(raw_element, valid_values=None, limit=(LIMIT_ITER, LIMIT_STR),
             valid_values = {k.lower() for k in valid_values}
             if clean_value.lower() in valid_values:
                 sanitized_list.append(clean_value)
+        else:
+            sanitized_list.append(clean_value)
 
     return sanitized_list
 
@@ -673,6 +675,8 @@ def sanitize_dict(raw_element, valid_keys=None, valid_values=None, limit=(LIMIT_
             valid_values = {k.lower() for k in valid_values}
             if clean_value.lower() in valid_values:
                 sanitized_dict[clean_key] = clean_value
+        else:
+            sanitized_dict[clean_key] = clean_value
 
     return sanitized_dict
 
