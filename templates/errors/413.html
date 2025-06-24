@@ -2,77 +2,91 @@
 
 {% block title %}Request Too Large - JobFinder{% endblock %}
 
+{% block head %}
+  {{ super() }}
+    <style nonce="{{ nonce }}">
+        .error-page {
+            padding: 2rem 0;
+            min-height: 60vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .error-page h1 {
+            font-size: 8rem;
+            font-weight: bold;
+            opacity: 0.3;
+        }
+
+        .error-page h2 {
+            color: #343a40;
+            font-weight: 600;
+        }
+
+        .error-page .lead {
+            color: #6c757d;
+        }
+
+        @media (max-width: 768px) {
+            .error-page h1 {
+                font-size: 4rem;
+            }
+
+            .btn-lg {
+                display: block;
+                width: 100%;
+                margin-bottom: 1rem;
+            }
+
+            .me-3 {
+                margin-right: 0 !important;
+            }
+        }
+    </style>
+{% endblock %}
+
 {% block content %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8 text-center">
-            <div class="error-page">
-                <h1 class="display-1 text-muted">413</h1>
-                <h2 class="mb-4">Request Too Large</h2>
-                <p class="lead mb-4">
-                    The file or data you're trying to upload is too large.
-                </p>
-                <p class="mb-4">
-                    Please try uploading a smaller file or reducing the amount of data in your request.
-                    Our maximum file size limit helps ensure the best experience for all users.
-                </p>
-                <div class="mt-4">
-                    <button onclick="window.history.back()" class="btn btn-primary btn-lg me-3">
-                        <i class="fas fa-arrow-left me-2"></i>Go Back
-                    </button>
-                    <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary btn-lg">
-                        <i class="fas fa-home me-2"></i>Go Home
-                    </a>
-                </div>
-                <div class="mt-4">
-                    <small class="text-muted">
-                        Need help with file size limits? Contact us at
-                        <a href="mailto:neotorino13@gmail.com">neotorino13@gmail.com</a>
-                    </small>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8 text-center">
+                <div class="error-page">
+                    <h1 class="display-1 text-muted">413</h1>
+                    <h2 class="mb-4">Request Too Large</h2>
+                    <p class="lead mb-4">
+                        The file or data you're trying to upload is too large.
+                    </p>
+                    <p class="mb-4">
+                        Please try uploading a smaller file or reducing the amount of data in your request.
+                        Our maximum file size limit helps ensure the best experience for all users.
+                    </p>
+                    <div class="mt-4">
+                        <button onclick="window.history.back()" class="btn btn-primary btn-lg me-3">
+                            <i class="fas fa-arrow-left me-2"></i>Go Back
+                        </button>
+                        <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary btn-lg">
+                            <i class="fas fa-home me-2"></i>Go Home
+                        </a>
+                    </div>
+                    <div class="mt-4">
+                        <small class="text-muted">
+                            Need help with file size limits? Contact us at <span id="email"></span>
+                        </small>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+{% endblock %}
 
-<style nonce="{{ nonce }}">
-.error-page {
-    padding: 2rem 0;
-    min-height: 60vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
+{% block scripts %}
+    {{ super() }}
+    <script nonce="{{ nonce }}" >
+        const user = "neotorino13";
+        const domain = "gmail.com";
+        const email = user + "@" + domain;
+        const link = `<a href="mailto:${email}">${email}</a>`;
+        document.getElementById("email").innerHTML = link;
+    </script>
 
-.error-page h1 {
-    font-size: 8rem;
-    font-weight: bold;
-    opacity: 0.3;
-}
-
-.error-page h2 {
-    color: #343a40;
-    font-weight: 600;
-}
-
-.error-page .lead {
-    color: #6c757d;
-}
-
-@media (max-width: 768px) {
-    .error-page h1 {
-        font-size: 4rem;
-    }
-
-    .btn-lg {
-        display: block;
-        width: 100%;
-        margin-bottom: 1rem;
-    }
-
-    .me-3 {
-        margin-right: 0 !important;
-    }
-}
-</style>
 {% endblock %}

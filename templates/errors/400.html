@@ -2,70 +2,74 @@
 
 {% block title %}Bad Request - JobFinder{% endblock %}
 
+{% block head %}
+    {{ super() }}
+    <style nonce="{{ nonce }}">
+        .error-page {
+            padding: 2rem 0;
+            min-height: 60vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .error-page h1 {
+            font-size: 8rem;
+            font-weight: bold;
+            opacity: 0.3;
+        }
+
+        .error-page h2 {
+            color: #343a40;
+            font-weight: 600;
+        }
+
+        .error-page .lead {
+            color: #6c757d;
+        }
+
+        @media (max-width: 768px) {
+            .error-page h1 {
+                font-size: 4rem;
+            }
+
+            .btn-lg {
+                display: block;
+                width: 100%;
+                margin-bottom: 1rem;
+            }
+
+            .me-3 {
+                margin-right: 0 !important;
+            }
+        }
+    </style>
+{% endblock %}
+
+
 {% block content %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8 text-center">
-            <div class="error-page">
-                <h1 class="display-1 text-muted">400</h1>
-                <h2 class="mb-4">Bad Request</h2>
-                <p class="lead mb-4">
-                    The request you sent couldn't be understood by the server.
-                </p>
-                <p class="mb-4">
-                    This might be due to malformed syntax or an invalid request format. Please check your input and try again.
-                </p>
-                <div class="mt-4">
-                    <button onclick="window.history.back()" class="btn btn-primary btn-lg me-3">
-                        <i class="fas fa-arrow-left me-2"></i>Go Back
-                    </button>
-                    <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary btn-lg">
-                        <i class="fas fa-home me-2"></i>Go Home
-                    </a>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8 text-center">
+                <div class="error-page">
+                    <h1 class="display-1 text-muted">400</h1>
+                    <h2 class="mb-4">Bad Request</h2>
+                    <p class="lead mb-4">
+                        The request you sent couldn't be understood by the server.
+                    </p>
+                    <p class="mb-4">
+                        This might be due to malformed syntax or an invalid request format. Please check your input and try again.
+                    </p>
+                    <div class="mt-4">
+                        <button onclick="window.history.back()" class="btn btn-primary btn-lg me-3">
+                            <i class="fas fa-arrow-left me-2"></i>Go Back
+                        </button>
+                        <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary btn-lg">
+                            <i class="fas fa-home me-2"></i>Go Home
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-
-<style nonce="{{ nonce }}">
-.error-page {
-    padding: 2rem 0;
-    min-height: 60vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
-.error-page h1 {
-    font-size: 8rem;
-    font-weight: bold;
-    opacity: 0.3;
-}
-
-.error-page h2 {
-    color: #343a40;
-    font-weight: 600;
-}
-
-.error-page .lead {
-    color: #6c757d;
-}
-
-@media (max-width: 768px) {
-    .error-page h1 {
-        font-size: 4rem;
-    }
-
-    .btn-lg {
-        display: block;
-        width: 100%;
-        margin-bottom: 1rem;
-    }
-
-    .me-3 {
-        margin-right: 0 !important;
-    }
-}
-</style>
 {% endblock %}
