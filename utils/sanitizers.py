@@ -40,6 +40,8 @@ import html
 import unicodedata
 import ipaddress
 import urllib.parse
+from enum import Enum
+from datetime import datetime
 
 from utils.general_utils import calculate_depth, is_numeric_string, is_valid_date_format
 
@@ -47,6 +49,11 @@ MAX_DEPTH = 3
 LIMIT_ITER = 150
 LIMIT_STR = 500
 LIMIT_NUM = 20
+
+class Hint(Enum):
+    URL = 'url'
+    DATE = 'date'
+    DATE_ISO = 'date_iso'
 
 def sanitize_element(element,
                     default_value=None,
@@ -114,6 +121,30 @@ def sanitize_element(element,
 
     return clean_value
 
+def sanitize_iso_date_strict(date_string):
+    """
+    Strict validation using regex pattern matching.
+    """
+    if not isinstance(date_string, str):
+        return ""
+
+    date_string = date_string.strip()
+
+    # Strict ISO 8601 pattern
+    iso_pattern = r'^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?(?:Z|[+-]\d{2}:\d{2})$'
+
+    match = re.match(iso_pattern, date_string)
+    if not match:
+        return ""
+
+    # Attempt to convert to datetime to validate further
+    try:
+        datetime.fromisoformat(date_string.replace('Z', '+00:00'))
+    except ValueError:
+        return ""
+
+    # If valid, return the original string
+    return date_string
 
 def sanitize_string(raw_element, limit=LIMIT_STR, hint=None):
     """
@@ -137,7 +168,7 @@ def sanitize_string(raw_element, limit=LIMIT_STR, hint=None):
     suspicious_unicode_ranges = [
         (0x0400, 0x04FF),  # Cyrillic
         (0x1F00, 0x1FFF),  # Greek Extended
-        (0x2000, 0x206F),  # General Punctuation (includes zero-width chars)
+        (0x2000, 0x206F),  # General Punctuation (includes zero-width chars, curly apostrophe (’), etc) - See more at the end of this script.
         (0x2070, 0x209F),  # Superscripts and Subscripts
         (0x20A0, 0x20CF),  # Currency Symbols
         (0x2100, 0x214F),  # Letterlike Symbols
@@ -211,7 +242,7 @@ def sanitize_string(raw_element, limit=LIMIT_STR, hint=None):
 
     # URL/URI detection and sanitization - Enhanced with more protocols
     url_patterns = [
-        r'https?://[^\s<>"]+' if hint != 'url' else '',
+        r'https?://[^\s<>"]+' if hint != Hint.URL else '',
         r'ftp://[^\s<>"]+',
         r'file://[^\s<>"]+',
         r'data:[^\s<>"]+',
@@ -274,7 +305,7 @@ def sanitize_string(raw_element, limit=LIMIT_STR, hint=None):
 
     # File extension and MIME type detection
     file_extensions = [
-        rf'\.(exe|bat|cmd|pif|scr|vbs|js|jar|dll|msi|deb|rpm|dmg|pkg|app{"" if hint == "url" else "|com"})\b',
+        rf'\.(exe|bat|cmd|pif|scr|vbs|js|jar|dll|msi|deb|rpm|dmg|pkg|app{"" if hint == Hint.URL else "|com"})\b',
         r'\.(php|asp|aspx|jsp|cgi|pl|py|rb|sh|bash|zsh|fish)\b',
         r'\.(htaccess|htpasswd|web\.config|robots\.txt)\b'
     ]
@@ -317,7 +348,7 @@ def sanitize_string(raw_element, limit=LIMIT_STR, hint=None):
     for pattern in js_patterns:
         text = re.sub(pattern, '', text, flags=re.IGNORECASE | re.DOTALL)
 
-    if hint == 'url':
+    if hint == Hint.URL:
         # For URLs, only remove characters that are never valid in URLs
         dangerous_chars = '<>"\'`\\;(){}[]|^'
     else:
@@ -327,9 +358,11 @@ def sanitize_string(raw_element, limit=LIMIT_STR, hint=None):
         text = text.replace(char, '')
 
     # Special characters that need removal
-    if hint == 'url':
+    if hint == Hint.URL:
         opensearch_special = r'[|><!~]'  # Keep URL-safe characters
-    elif hint == 'date' or is_valid_date_format(text):
+    elif hint == Hint.DATE_ISO:
+        opensearch_special = r'[=|><!~\\\/]'
+    elif hint == Hint.DATE or is_valid_date_format(text):
         opensearch_special = r'[+=|><!~:\\\/]'
     else:
         opensearch_special = r'[+\-=|><!~:\\\/]'
@@ -479,6 +512,8 @@ def sanitize_string(raw_element, limit=LIMIT_STR, hint=None):
 
     if is_numeric_string(text):
         return sanitize_number(text, hint=hint)
+    if hint == Hint.DATE_ISO:
+        return sanitize_iso_date_strict(date_string=text)
 
     return text
 
@@ -746,3 +781,55 @@ def sanitize_set(raw_element, valid_values=None, limit=(LIMIT_ITER, LIMIT_STR), 
             sanitized_set.add(clean_value)
 
     return sanitized_set
+
+
+
+################################################################
+# Characters that fall between this range (0x2000, 0x206F)
+
+# +------------+---------+-------------------------------------+
+# | Character  | Unicode | Description                         |
+# +------------+---------+-------------------------------------+
+# |            | U+2000  | En quad                             |
+# |            | U+2001  | Em quad                             |
+# |            | U+2002  | En space                            |
+# |            | U+2003  | Em space                            |
+# |            | U+2004  | Three-per-em space                  |
+# |            | U+2005  | Four-per-em space                   |
+# |            | U+2006  | Six-per-em space                    |
+# |            | U+2007  | Figure space                        |
+# |            | U+2008  | Punctuation space                   |
+# |            | U+2009  | Thin space                          |
+# |            | U+200A  | Hair space                          |
+# |            | U+200B  | Zero width space                    |
+# |            | U+200C  | Zero width non-joiner               |
+# |            | U+200D  | Zero width joiner                   |
+# |            | U+200E  | Left-to-right mark                  |
+# | ‐          | U+2010  | Hyphen                              |
+# | ‒          | U+2012  | Figure dash                         |
+# | –          | U+2013  | En dash                             |
+# | —          | U+2014  | Em dash                             |
+# | ‘          | U+2018  | Left single quotation mark          |
+# | ’          | U+2019  | Right single quotation mark         |
+# | ‚          | U+201A  | Single low-9 quotation mark         |
+# | “          | U+201C  | Left double quotation mark          |
+# | ”          | U+201D  | Right double quotation mark         |
+# | „          | U+201E  | Double low-9 quotation mark         |
+# | ‟          | U+201F  | Double high-reversed quote          |
+# |            | U+202F  | Narrow no-break space               |
+# |            | U+205F  | Medium mathematical space           |
+# |            | U+2060  | Word joiner                         |
+# |            | U+2061  | Function application                |
+# |            | U+2062  | Invisible times                     |
+# |            | U+2063  | Invisible separator                 |
+# |            | U+2064  | Invisible plus                      |
+# |            | U+2067  | Right-to-left isolate               |
+# |            | U+2068  | First strong isolate                |
+# |            | U+2069  | Pop directional isolate             |
+# |            | U+206A  | (deprecated) Inhibit symmetric      |
+# |            | U+206B  | (deprecated) Activate symmetric     |
+# |            | U+206C  | (deprecated) Inhibit arabic shaping |
+# |            | U+206D  | (deprecated) Activate arabic shaping|
+# |            | U+206E  | (deprecated) National digit shapes  |
+# |            | U+206F  | (deprecated) Nominal digit shapes   |
+# +------------+---------+-------------------------------------+

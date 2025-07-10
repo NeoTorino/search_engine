@@ -5,7 +5,7 @@ from collections import Counter
 from datetime import datetime, timedelta
 import requests
 
-from utils.sanitizers import sanitize_element
+from utils.sanitizers import sanitize_element, Hint
 from utils.general_utils import is_valid_date_format
 
 OPENSEARCH_URL = "https://localhost:9200"
@@ -453,7 +453,7 @@ def get_organizations_insights(search_params=None):
                 raw_url = url_careers_buckets[0].get("key", None)
                 # Basic URL validation
                 if raw_url:
-                    clean_url = sanitize_element(element=raw_url, default_value=None, limit=(0, 500), hint='url')
+                    clean_url = sanitize_element(element=raw_url, default_value=None, limit=(0, 500), hint=Hint.URL)
                     if clean_url and isinstance(clean_url, str) and len(clean_url) < 500:
                     # Simple URL pattern check
                         if re.match(r'^https?://', clean_url):
